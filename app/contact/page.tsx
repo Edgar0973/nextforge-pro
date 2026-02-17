@@ -1,4 +1,4 @@
-import { Section } from "@/components/section";
+﻿import { Section } from "@/components/section";
 
 export default function ContactPage() {
   return (
@@ -6,7 +6,7 @@ export default function ContactPage() {
       <Section
         eyebrow="Contact"
         title="Share a bit about your project"
-        kicker="I’ll review your project details and reply within one business day with next steps."
+        kicker="Iâ€™ll review your project details and reply within one business day with next steps."
       >
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)]">
           <form className="space-y-4 text-sm">
@@ -94,8 +94,8 @@ export default function ContactPage() {
                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 focus:ring"
               >
                 <option>Under $2,500</option>
-                <option>$2,500 – $5,000</option>
-                <option>$5,000 – $10,000</option>
+                <option>$2,500 â€“ $5,000</option>
+                <option>$5,000 â€“ $10,000</option>
                 <option>$10,000+</option>
               </select>
             </div>
@@ -112,7 +112,7 @@ export default function ContactPage() {
                 name="timeline"
                 type="text"
                 className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="e.g., Kickoff in 3–4 weeks, launch in 2 months"
+                placeholder="e.g., Kickoff in 3â€“4 weeks, launch in 2 months"
               />
             </div>
 
@@ -140,7 +140,7 @@ export default function ContactPage() {
             </button>
 
             <p className="mt-2 text-xs text-slate-500">
-              No spam, ever. I’ll only use your details to respond to this
+              No spam, ever. Iâ€™ll only use your details to respond to this
               inquiry.
             </p>
           </form>
@@ -150,10 +150,10 @@ export default function ContactPage() {
               Typical pricing
             </h3>
             <ul className="space-y-2 text-sm text-slate-300">
-              <li>• Launch Starter projects usually fall between $2,500–$4,000.</li>
-              <li>• Product Ready projects are typically $6,500–$12,000.</li>
+              <li>â€¢ Launch Starter projects usually fall between $2,500â€“$4,000.</li>
+              <li>â€¢ Product Ready projects are typically $6,500â€“$12,000.</li>
               <li>
-                • Ongoing Partner retainers start at $2,000/month for 1–2 days
+                â€¢ Ongoing Partner retainers start at $2,000/month for 1â€“2 days
                 per week.
               </li>
             </ul>
@@ -190,3 +190,4 @@ export default function ContactPage() {
     </>
   );
 }
+
