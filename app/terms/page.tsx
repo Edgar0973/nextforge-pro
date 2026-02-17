@@ -24,7 +24,7 @@ export default function TermsPage() {
             work in my portfolio and marketing materials.
           </p>
           <p>
-            If youâ€™d like to negotiate different terms for a specific project,
+            If you'd like to negotiate different terms for a specific project,
             we can document that in a separate written agreement.
           </p>
           <p>
