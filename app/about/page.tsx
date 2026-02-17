@@ -5,7 +5,7 @@ export default function AboutPage() {
     <>
       <Section
         eyebrow="About"
-        title="Hi, I’m Alex — a freelance product designer focused on the details that matter."
+        title="Hi, I’m Edgardo Lopez — a freelance product designer focused on the details that matter."
         kicker="I blend UX strategy, interface design, and product thinking to help teams launch faster with more confidence."
       >
         <div className="grid gap-10 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)]">
