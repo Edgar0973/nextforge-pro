@@ -4,7 +4,10 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950">
       <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 text-sm text-slate-400 md:flex-row md:items-center md:justify-between md:px-6">
-      <p>Â© {new Date().getFullYear()} Edgardo Lopez â€“ Next Forge Pro. All rights reserved.</p>
+        <p>
+          {"\u00A9"} {new Date().getFullYear()} Edgardo Lopez - Next Forge Pro. All rights reserved.
+        </p>
+
         <div className="flex flex-wrap items-center gap-4">
           <Link href="/privacy" className="hover:text-sky-300">
             Privacy
