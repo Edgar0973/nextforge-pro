@@ -5,10 +5,11 @@ export default function ContactPage() {
     <>
       <Section
         eyebrow="Contact"
-        title="Share a bit about your project"
-        kicker="I'll review your project details and reply within one business day with next steps."
+        title="Say hello, ask a question, or request support"
+        kicker="Use this form for general questions, support issues, or collaboration ideas. For project estimates, head to the quote form instead."
       >
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)]">
+          {/* Contact / support form */}
           <form className="space-y-4 text-sm">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -22,9 +23,9 @@ export default function ContactPage() {
                   id="name"
                   name="name"
                   type="text"
-                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                  placeholder="Alex Founder"
                   required
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                  placeholder="Alex Founder"
                 />
               </div>
               <div>
@@ -38,150 +39,179 @@ export default function ContactPage() {
                   id="email"
                   name="email"
                   type="email"
-                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                  placeholder="you@company.com"
                   required
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                  placeholder="you@company.com"
                 />
               </div>
             </div>
 
             <div>
               <label
-                htmlFor="company"
+                htmlFor="topic"
                 className="block text-xs font-medium text-slate-200"
               >
-                Company / product
-              </label>
-              <input
-                id="company"
-                name="company"
-                type="text"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="Looply, B2B SaaS for ops teams"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="projectType"
-                className="block text-xs font-medium text-slate-200"
-              >
-                What are you looking for?
+                What can I help you with?
               </label>
               <select
-                id="projectType"
-                name="projectType"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 focus:ring"
+                id="topic"
+                name="topic"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 focus:ring"
               >
-                <option>New website</option>
-                <option>App or product UI</option>
-                <option>UX audit / consulting</option>
-                <option>Ongoing design support</option>
+                <option>General question</option>
+                <option>Support / issue with an existing project</option>
+                <option>Billing or invoicing</option>
+                <option>Partnership / collaboration</option>
                 <option>Something else</option>
               </select>
             </div>
 
             <div>
               <label
-                htmlFor="budget"
+                htmlFor="projectRef"
                 className="block text-xs font-medium text-slate-200"
               >
-                Budget range (USD)
-              </label>
-              <select
-                id="budget"
-                name="budget"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 focus:ring"
-              >
-                <option>Under $2,500</option>
-                <option>$2,500 - $5,000</option>
-                <option>$5,000 - $10,000</option>
-                <option>$10,000+</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="timeline"
-                className="block text-xs font-medium text-slate-200"
-              >
-                Ideal timeline
+                If this relates to an existing project, how should I identify it?
               </label>
               <input
-                id="timeline"
-                name="timeline"
+                id="projectRef"
+                name="projectRef"
                 type="text"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="e.g., Kickoff in 3–4 weeks, launch in 2 months"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                placeholder="Project name, invoice number, or short reference (optional)"
               />
             </div>
 
             <div>
               <label
-                htmlFor="details"
+                htmlFor="message"
                 className="block text-xs font-medium text-slate-200"
               >
-                Project details
+                Message
               </label>
               <textarea
-                id="details"
-                name="details"
+                id="message"
+                name="message"
                 rows={5}
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="What are you building? What problem are you trying to solve? Any links I should look at?"
+                required
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                placeholder="Share any context, questions, or links that will help me respond."
               />
             </div>
 
-            <button type="submit" className="btn-pill hover:text-slate-950">
-              Submit inquiry
+            <div>
+              <label
+                htmlFor="howHeard"
+                className="block text-xs font-medium text-slate-200"
+              >
+                How did you hear about Next Forge Pro? (optional)
+              </label>
+              <input
+                id="howHeard"
+                name="howHeard"
+                type="text"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                placeholder="Thumbtack, LinkedIn, Upwork, YouTube, Reddit, referral, etc."
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-pill mt-2"
+            >
+              Send message
             </button>
 
             <p className="mt-2 text-xs text-slate-500">
-              No spam, ever. I'll only use your details to respond to this
-              inquiry.
-            </p>
-          </form>
-
-          <aside className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-200">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">
-              Typical pricing
-            </h3>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li>- Launch Starter projects usually fall between $2,500-4,000.</li>
-              <li>- Product Ready projects are typically $6,500-12,000.</li>
-              <li>
-                - Ongoing Partner retainers start at $2,000/month for 1-2 days
-                per week.
-              </li>
-            </ul>
-
-            <div className="h-px w-full bg-slate-800" />
-
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">
-              Direct contact
-            </h3>
-            <p className="text-sm text-slate-300">
-              Prefer email? Reach me at{" "}
+              I typically reply within one business day. For project estimates,
+              please use the{" "}
               <a
-                href="mailto:contact@nextforgepro.com"
-                className="text-sky-300 hover:text-sky-200"
+                href="/quote"
+                className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2"
               >
-                contact@nextforgepro.com
+                quote form
               </a>
               .
             </p>
-            <p className="text-sm text-slate-300">
-              Or connect on{" "}
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-sky-300 hover:text-sky-200"
-              >
-                LinkedIn
-              </a>{" "}
-              to stay in touch.
-            </p>
+          </form>
+
+          {/* Contact / support info sidebar */}
+          <aside className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-200">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                Direct email
+              </h3>
+              <div className="mt-3 space-y-1 text-sm text-slate-300">
+                <p>
+                  General:{" "}
+                  <a
+                    href="mailto:contact@nextforgepro.com"
+                    className="text-cyan-300 hover:text-cyan-200"
+                  >
+                    contact@nextforgepro.com
+                  </a>
+                </p>
+                <p>
+                  Support:{" "}
+                  <a
+                    href="mailto:support@nextforgepro.com"
+                    className="text-cyan-300 hover:text-cyan-200"
+                  >
+                    support@nextforgepro.com
+                  </a>
+                </p>
+                <p>
+                  Billing:{" "}
+                  <a
+                    href="mailto:billing@nextforgepro.com"
+                    className="text-cyan-300 hover:text-cyan-200"
+                  >
+                    billing@nextforgepro.com
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-slate-800" />
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                Response times
+              </h3>
+              <p className="mt-2 text-sm text-slate-300">
+                Most messages receive a reply within one business day. Support
+                and billing questions are prioritized during business hours.
+              </p>
+            </div>
+
+            <div className="h-px w-full bg-slate-800" />
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                Other ways to connect
+              </h3>
+              <ul className="mt-2 space-y-1 text-sm text-slate-300">
+                <li>
+                  LinkedIn –{" "}
+                  <a
+                    href="https://linkedin.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-cyan-300 hover:text-cyan-200"
+                  >
+                    follow or send a DM
+                  </a>
+                </li>
+                <li>
+                  Upwork – your{" "}
+                  <span className="text-slate-200">Next Forge Pro</span> profile
+                  when you’re ready.
+                </li>
+                <li>
+                  Thumbtack – for local or small-scope engagements.
+                </li>
+              </ul>
+            </div>
           </aside>
         </div>
       </Section>
