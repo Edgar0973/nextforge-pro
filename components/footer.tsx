@@ -6,47 +6,10 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 text-sm text-slate-400 md:px-6">
-        {/* Top row: copyright + primary site links */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <p>
-            © {year} Edgardo Lopez - Next Forge Pro. All rights reserved.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href="/about" className="hover:text-sky-300">
-              About
-            </Link>
-            <Link href="/contact" className="hover:text-sky-300">
-              Contact
-            </Link>
-            <Link href="/support" className="hover:text-sky-300">
-              Support
-            </Link>
-            <Link href="/billing" className="hover:text-sky-300">
-              Billing
-            </Link>
-            <Link href="/privacy" className="hover:text-sky-300">
-              Privacy
-            </Link>
-            <Link href="/policy" className="hover:text-sky-300">
-              Policy
-            </Link>
-            <Link href="/terms" className="hover:text-sky-300">
-              Terms
-            </Link>
-            <Link href="/contribute" className="hover:text-sky-300">
-              Contribute
-            </Link>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="h-px w-full bg-slate-800" />
-
-        {/* Middle row: contact info + social + marketplaces */}
+        {/* Top: Contact + Social & platforms + Marketplaces */}
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Contact / phone + multiple emails */}
-          <div className="space-y-2">
+          {/* Contact / phone + multiple emails + Terms/Policy */}
+          <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Contact
             </p>
@@ -64,28 +27,28 @@ export function Footer() {
               <p>
                 Billing:&nbsp;
                 <a
-                  href="mailto:billing@nextforge.com"
+                  href="mailto:billing@nextforgepro.com"
                   className="hover:text-sky-300"
                 >
-                  billing@nextforge.com
+                  billing@nextforgepro.com
                 </a>
               </p>
               <p>
                 Support:&nbsp;
                 <a
-                  href="mailto:support@nextforge.com"
+                  href="mailto:support@nextforgepro.com"
                   className="hover:text-sky-300"
                 >
-                  support@nextforge.com
+                  support@nextforgepro.com
                 </a>
               </p>
               <p>
                 Quotes:&nbsp;
                 <a
-                  href="mailto:quotes@nextforge.com"
+                  href="mailto:quotes@nextforgepro.com"
                   className="hover:text-sky-300"
                 >
-                  quotes@nextforge.com
+                  quotes@nextforgepro.com
                 </a>
               </p>
             </div>
@@ -96,10 +59,21 @@ export function Footer() {
                 +1 (555) 555-5555
               </a>
             </p>
+
+            {/* Terms + Policy grouped with contact block */}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <Link href="/terms" className="hover:text-sky-300">
+                Terms
+              </Link>
+              <span className="text-slate-600">•</span>
+              <Link href="/policy" className="hover:text-sky-300">
+                Policy
+              </Link>
+            </div>
           </div>
 
           {/* Social / platforms */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Social &amp; platforms
             </p>
@@ -140,7 +114,7 @@ export function Footer() {
           </div>
 
           {/* Marketplaces: Thumbtack, Instajob, Upwork */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Marketplaces
             </p>
@@ -176,12 +150,12 @@ export function Footer() {
         {/* Divider */}
         <div className="h-px w-full bg-slate-800" />
 
-        {/* Bottom row: payment methods */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        {/* Centered payment methods */}
+        <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
             Payment methods
           </p>
-          <div className="flex flex-wrap gap-2 text-xs text-slate-200">
+          <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-200">
             <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1">
               Visa
             </span>
@@ -202,6 +176,14 @@ export function Footer() {
             </span>
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="h-px w-full bg-slate-800" />
+
+        {/* Bottom: centered copyright */}
+        <p className="text-center text-xs md:text-sm text-slate-500">
+          © {year} Next Forge Pro LLC. All rights reserved.
+        </p>
       </div>
     </footer>
   );
