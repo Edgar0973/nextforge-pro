@@ -5,10 +5,11 @@ export default function QuotePage() {
     <>
       <Section
         eyebrow="Get a quote"
-        title="Share a bit about your project"
-        kicker="I’ll review your project details and follow up with a ballpark quote and next steps."
+        title="Share your project details for a fast estimate"
+        kicker="I’ll review your project context, goals, and constraints and follow up with a ballpark quote and suggested next steps."
       >
-        <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.2fr)]">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.1fr)]">
+          {/* Quote / project intake form */}
           <form className="space-y-4 text-sm">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
@@ -22,9 +23,9 @@ export default function QuotePage() {
                   id="name"
                   name="name"
                   type="text"
-                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                  placeholder="Alex Founder"
                   required
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                  placeholder="Alex Founder"
                 />
               </div>
               <div>
@@ -38,9 +39,9 @@ export default function QuotePage() {
                   id="email"
                   name="email"
                   type="email"
-                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                  placeholder="you@company.com"
                   required
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                  placeholder="you@company.com"
                 />
               </div>
             </div>
@@ -56,63 +57,103 @@ export default function QuotePage() {
                 id="company"
                 name="company"
                 type="text"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="Looply, B2B SaaS for ops teams"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                placeholder="Looply – B2B SaaS for ops teams"
               />
             </div>
 
-            <div>
-              <label
-                htmlFor="projectType"
-                className="block text-xs font-medium text-slate-200"
-              >
-                What are you looking for?
-              </label>
-              <select
-                id="projectType"
-                name="projectType"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 focus:ring"
-              >
-                <option>New website</option>
-                <option>App or product UI</option>
-                <option>UX audit / consulting</option>
-                <option>Ongoing design support</option>
-                <option>Something else</option>
-              </select>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="projectType"
+                  className="block text-xs font-medium text-slate-200"
+                >
+                  What are you planning to build?
+                </label>
+                <select
+                  id="projectType"
+                  name="projectType"
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 focus:ring"
+                >
+                  <option>Marketing website</option>
+                  <option>Web app UI / dashboard</option>
+                  <option>Mobile app UI</option>
+                  <option>UX audit of an existing product</option>
+                  <option>Ongoing design support / retainer</option>
+                  <option>Multi-scope project (we’ll clarify)</option>
+                </select>
+              </div>
+              <div>
+                <label
+                  htmlFor="budget"
+                  className="block text-xs font-medium text-slate-200"
+                >
+                  Budget range (USD)
+                </label>
+                <select
+                  id="budget"
+                  name="budget"
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 focus:ring"
+                >
+                  <option>Under $2,500</option>
+                  <option>$2,500 – $5,000</option>
+                  <option>$5,000 – $10,000</option>
+                  <option>$10,000+</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="timeline"
+                  className="block text-xs font-medium text-slate-200"
+                >
+                  Ideal timeline
+                </label>
+                <input
+                  id="timeline"
+                  name="timeline"
+                  type="text"
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                  placeholder="Kickoff in 3–4 weeks, launch in 2–3 months"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="primaryGoal"
+                  className="block text-xs font-medium text-slate-200"
+                >
+                  Primary goal for this project
+                </label>
+                <select
+                  id="primaryGoal"
+                  name="primaryGoal"
+                  className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 focus:ring"
+                >
+                  <option>Increase sign-ups / demos</option>
+                  <option>Improve onboarding or activation</option>
+                  <option>Reduce support tickets / confusion</option>
+                  <option>Refresh an outdated UI</option>
+                  <option>Prepare for a launch / funding round</option>
+                  <option>Other (explain below)</option>
+                </select>
+              </div>
             </div>
 
             <div>
               <label
-                htmlFor="budget"
+                htmlFor="links"
                 className="block text-xs font-medium text-slate-200"
               >
-                Budget range (USD)
-              </label>
-              <select
-                id="budget"
-                name="budget"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 focus:ring"
-              >
-                <option>Under $2,500</option>
-                <option>$2,500 - $5,000</option>
-                <option>$5,000 - $10,000</option>
-                <option>$10,000+</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="timeline"
-                className="block text-xs font-medium text-slate-200"
-              >
-                Ideal timeline
+                Links I should review (optional)
               </label>
               <input
-                id="timeline"
-                name="timeline"
+                id="links"
+                name="links"
                 type="text"
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="e.g., Kickoff in 3–4 weeks, launch in 2 months"
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                placeholder="Product URL, Figma/Notion/GitHub links, Loom videos, etc."
               />
             </div>
 
@@ -126,73 +167,85 @@ export default function QuotePage() {
               <textarea
                 id="details"
                 name="details"
-                rows={5}
-                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-sky-500/60 placeholder:text-slate-500 focus:ring"
-                placeholder="What are you building? What problem are you trying to solve? Any links I should look at?"
+                rows={6}
+                className="mt-1 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-50 outline-none ring-cyan-500/60 placeholder:text-slate-500 focus:ring"
+                placeholder="What are you building? What does success look like? Any hard constraints or must-have features?"
               />
             </div>
 
-            <button type="submit" className="btn-pill hover:text-slate-950">
-              Submit inquiry
+            <button
+              type="submit"
+              className="btn-pill mt-2"
+            >
+              Request project quote
             </button>
 
             <p className="mt-2 text-xs text-slate-500">
-              No spam, ever. I’ll only use your details to respond with a
-              project estimate and next steps.
-            </p>
-          </form>
-
-          <aside className="space-y-5 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-200">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">
-              Typical pricing
-            </h3>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li>- Launch Starter projects usually fall between $2,500-4,000.</li>
-              <li>- Product Ready projects are typically $6,500-12,000.</li>
-              <li>
-                - Ongoing Partner retainers start at $2,000/month for 1-2 days
-                per week.
-              </li>
-            </ul>
-
-            <div className="h-px w-full bg-slate-800" />
-
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">
-              How the quoting process works
-            </h3>
-            <ol className="space-y-2 text-sm text-slate-300">
-              <li>1. You share your project context and constraints.</li>
-              <li>2. I follow up with clarifying questions if needed.</li>
-              <li>3. You receive a ballpark quote and suggested next steps.</li>
-            </ol>
-
-            <div className="h-px w-full bg-slate-800" />
-
-            <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-400">
-              Direct contact
-            </h3>
-            <p className="text-sm text-slate-300">
-              Prefer email? Reach me at{" "}
+              I’ll review your details and send over a ballpark estimate and
+              next steps. For support or billing questions, please use the{" "}
               <a
-                href="mailto:contact@nextforgepro.com"
-                className="text-sky-300 hover:text-sky-200"
+                href="/contact"
+                className="text-cyan-300 hover:text-cyan-200 underline underline-offset-2"
               >
-                contact@nextforgepro.com
+                contact form
               </a>
               .
             </p>
-            <p className="text-sm text-slate-300">
-              Or connect on{" "}
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noreferrer"
-                className="text-sky-300 hover:text-sky-200"
-              >
-                LinkedIn
-              </a>{" "}
-              to stay in touch.
-            </p>
+          </form>
+
+          {/* Quote-specific sidebar: pricing + process */}
+          <aside className="space-y-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm text-slate-200">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                Typical pricing
+              </h3>
+              <ul className="mt-3 space-y-2 text-sm text-slate-300">
+                <li>- Launch Starter projects: usually $2,500–4,000.</li>
+                <li>- Product Ready projects: typically $6,500–12,000.</li>
+                <li>
+                  - Ongoing Partner retainers: from $2,000/month for dedicated
+                  design time.
+                </li>
+              </ul>
+              <p className="mt-3 text-xs text-slate-500">
+                Final pricing depends on scope, complexity, and timelines. I’ll
+                always share a clear breakdown before we start.
+              </p>
+            </div>
+
+            <div className="h-px w-full bg-slate-800" />
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                How the quote process works
+              </h3>
+              <ol className="mt-3 space-y-2 text-sm text-slate-300">
+                <li>1. You share your context, goals, and constraints.</li>
+                <li>2. I may follow up with a few clarifying questions.</li>
+                <li>
+                  3. You receive a ballpark estimate, suggested scope, and
+                  timeline.
+                </li>
+              </ol>
+            </div>
+
+            <div className="h-px w-full bg-slate-800" />
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
+                Prefer email?
+              </h3>
+              <p className="mt-2 text-sm text-slate-300">
+                You can also email project briefs directly to{" "}
+                <a
+                  href="mailto:quotes@nextforgepro.com"
+                  className="text-cyan-300 hover:text-cyan-200"
+                >
+                  quotes@nextforgepro.com
+                </a>
+                . Attach any relevant docs or links and I’ll take a look.
+              </p>
+            </div>
           </aside>
         </div>
       </Section>
