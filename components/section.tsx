@@ -1,29 +1,35 @@
 import { ReactNode } from "react";
 
-interface SectionProps {
+type SectionProps = {
   id?: string;
-  className?: string;
   eyebrow?: string;
   title?: string;
   kicker?: string;
+  className?: string;
   children: ReactNode;
-}
+};
 
 export function Section({
   id,
-  className = "",
   eyebrow,
   title,
   kicker,
+  className,
   children,
 }: SectionProps) {
+  const sectionClass = [
+    "border-b border-slate-900/60",
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const hasHeader = eyebrow || title || kicker;
+
   return (
-    <section
-      id={id}
-      className={`border-b border-slate-900/60 ${className}`}
-    >
+    <section id={id} className={sectionClass}>
       <div className="mx-auto max-w-5xl px-4 py-12 md:px-6 md:py-16">
-        {(eyebrow || title || kicker) && (
+        {hasHeader && (
           <header className="mb-8 max-w-2xl">
             {eyebrow && (
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">

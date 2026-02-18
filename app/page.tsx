@@ -59,7 +59,7 @@ export default function HomePage() {
           {/* Left: pitch */}
           <div className="flex-1">
             <p className="mb-3 inline-flex rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
-              Mobile-first apps & responsive websites for startups
+              Mobile-first apps &amp; responsive websites for startups
             </p>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">
               I design{" "}
@@ -75,15 +75,12 @@ export default function HomePage() {
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link
-                href="/contact"
-                className="rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-medium text-slate-950 shadow-sm transition hover:bg-cyan-400"
-              >
+              <Link href="/quote" className="btn-pill hover:text-slate-950">
                 Get a project quote
               </Link>
               <Link
                 href="/portfolio"
-                className="rounded-full border border-slate-600/80 px-5 py-2.5 text-sm font-medium text-slate-100 hover:border-cyan-400 hover:text-cyan-300"
+                className="btn-pill btn-pill-sm hover:text-slate-950"
               >
                 View portfolio
               </Link>
@@ -94,7 +91,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Right: techy dashboard mock + video */}
+          {/* Right: video + metrics card */}
           <div className="flex-1">
             <div className="relative mx-auto max-w-sm">
               <div className="relative overflow-hidden rounded-3xl border border-cyan-400/30 bg-slate-900/80 shadow-[0_0_60px_rgba(45,212,191,0.35)]">
@@ -110,23 +107,17 @@ export default function HomePage() {
                     <span>Next Forge Pro</span>
                   </div>
 
-                  {/* Video panel */}
+                  {/* Background video */}
                   <div className="relative mb-4 h-40 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/80">
                     <video
-                      className="h-full w-full object-cover"
+                      src="/cascadingcodenorthtosouthneongreen.mp4"
                       autoPlay
                       loop
                       muted
                       playsInline
-                    >
-                      <source
-                        src="/cascadingcodenorthtosouthneongreen.mp4"
-                        type="video/mp4"
-                      />
-                      Your browser does not support the video tag.
-                    </video>
-                    {/* dark overlay so motion doesn’t overpower the UI */}
-                    <div className="pointer-events-none absolute inset-0 bg-slate-950/40" />
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-slate-950/10" />
                   </div>
 
                   <div className="grid grid-cols-3 gap-3 text-xs text-slate-200">
@@ -174,7 +165,7 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* REST OF PAGE (services, projects, testimonials) – you can keep your existing sections, they’ll inherit the new theme nicely */}
+      {/* Services */}
       <Section
         eyebrow="Services"
         title="Design support for product-focused teams"
@@ -195,6 +186,7 @@ export default function HomePage() {
         </div>
       </Section>
 
+      {/* Recent projects */}
       <Section
         eyebrow="Selected work"
         title="Recent projects"
@@ -216,6 +208,7 @@ export default function HomePage() {
         </div>
       </Section>
 
+      {/* Testimonials */}
       <Section
         eyebrow="Testimonials"
         title="Teams I’ve partnered with"

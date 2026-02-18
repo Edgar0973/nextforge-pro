@@ -8,7 +8,7 @@
 
 @media (prefers-color-scheme: light) {
   :root {
-    /* Still keep it fairly dark even in "light" mode */
+    /* Keep it dark even in "light" mode for consistent brand */
     --background: #020617;
     --foreground: #e5e7eb;
   }
@@ -21,4 +21,26 @@ body {
   color: var(--foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", sans-serif;
+}
+
+/* ============================= */
+/* Global pill button styles     */
+/* ============================= */
+
+/* Base pill – text-like at rest, pill appears on hover */
+.btn-pill {
+  @apply inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium
+    border border-transparent bg-transparent
+    text-slate-200
+    transition;
+}
+
+/* Smaller pill variant (for nav items) */
+.btn-pill-sm {
+  @apply px-3 py-1.5 text-xs;
+}
+
+/* Hover “illuminate” effect */
+.btn-pill:hover {
+  @apply border-sky-500 bg-sky-500 text-slate-950 shadow shadow-cyan-500/30;
 }

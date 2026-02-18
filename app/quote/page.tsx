@@ -132,10 +132,7 @@ export default function QuotePage() {
               />
             </div>
 
-            <button
-              type="submit"
-              className="inline-flex items-center rounded-full bg-sky-500 px-5 py-2.5 text-sm font-medium text-slate-950 hover:bg-sky-400"
-            >
+            <button type="submit" className="btn-pill hover:text-slate-950">
               Submit inquiry
             </button>
 
@@ -150,12 +147,8 @@ export default function QuotePage() {
               Typical pricing
             </h3>
             <ul className="space-y-2 text-sm text-slate-300">
-              <li>
-                - Launch Starter projects usually fall between $2,500-4,000.
-              </li>
-              <li>
-                - Product Ready projects are typically $6,500-12,000.
-              </li>
+              <li>- Launch Starter projects usually fall between $2,500-4,000.</li>
+              <li>- Product Ready projects are typically $6,500-12,000.</li>
               <li>
                 - Ongoing Partner retainers start at $2,000/month for 1-2 days
                 per week.

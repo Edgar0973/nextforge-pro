@@ -16,32 +16,38 @@ export function Header() {
   return (
     <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 md:px-6">
+        {/* Logo / name */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="h-8 w-8 rounded-lg bg-sky-500/20 ring-1 ring-sky-500/40" />
+          <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900/80 ring-1 ring-cyan-400/40">
+            <span className="absolute inset-0 rounded-xl bg-gradient-to-tr from-cyan-500/20 via-fuchsia-500/10 to-transparent" />
+            <span className="relative h-3 w-3 rounded-sm bg-gradient-to-tr from-cyan-400 to-fuchsia-400 shadow-[0_0_16px_rgba(45,212,191,0.9)]" />
+          </span>
           <div className="leading-tight">
-            <p className="text-sm font-semibold tracking-wide text-sky-300">
-              Edgardo Lopez
+            <p className="text-sm font-semibold tracking-wide text-slate-50">
+              Next Forge Pro
             </p>
-            <p className="text-xs text-slate-400">Web & App Designer</p>
+            <p className="text-xs text-slate-400">
+              Edgardo Lopez · Web &amp; App Design
+            </p>
           </div>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 md:flex">
+        <nav className="hidden items-center gap-2 md:flex">
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm text-slate-300 transition hover:text-sky-300"
+              className="btn-pill btn-pill-sm hover:text-slate-950"
             >
               {link.label}
             </Link>
           ))}
 
-          {/* Single pill CTA → /quote */}
+          {/* Single CTA → /quote */}
           <Link
             href="/quote"
-            className="rounded-full border border-sky-500 bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-sm transition hover:bg-sky-400"
+            className="btn-pill hover:text-slate-950"
           >
             Get a quote
           </Link>
@@ -49,6 +55,7 @@ export function Header() {
 
         {/* Mobile menu button */}
         <button
+          type="button"
           onClick={() => setOpen((v) => !v)}
           className="inline-flex items-center rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 md:hidden"
           aria-expanded={open}
@@ -60,24 +67,24 @@ export function Header() {
 
       {/* Mobile nav panel */}
       {open && (
-        <nav className="border-t border-slate-800 bg-slate-950 md:hidden">
-          <div className="mx-auto flex max-w-5xl flex-col gap-1 px-4 py-3">
+        <nav className="border-t border-slate-800 bg-slate-950/95 md:hidden">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3">
             {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="rounded-md px-2 py-2 text-sm text-slate-200 hover:bg-slate-900"
+                className="btn-pill btn-pill-sm hover:text-slate-950"
               >
                 {link.label}
               </Link>
             ))}
 
-            {/* Single CTA on mobile as well */}
+            {/* Mobile CTA – full-width pill */}
             <Link
               href="/quote"
               onClick={() => setOpen(false)}
-              className="mt-2 rounded-md bg-sky-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400"
+              className="btn-pill mt-2 w-full justify-center hover:text-slate-950"
             >
               Get a quote
             </Link>
