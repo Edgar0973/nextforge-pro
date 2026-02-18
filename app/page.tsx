@@ -50,38 +50,40 @@ const testimonials = [
 export default function HomePage() {
   return (
     <>
+      {/* HERO */}
       <Section
         id="hero"
-        className="border-b border-slate-900/80 bg-gradient-to-b from-slate-950 via-slate-950 to-slate-950"
+        className="border-b border-slate-900/80 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950/95"
       >
-        <div className="flex flex-col gap-8 md:flex-row md:items-center">
+        <div className="flex flex-col gap-10 md:flex-row md:items-center">
+          {/* Left: pitch */}
           <div className="flex-1">
-            <p className="mb-3 inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-200">
+            <p className="mb-3 inline-flex rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
               Mobile-first apps & responsive websites for startups
             </p>
-            <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">
               I design{" "}
-              <span className="text-sky-300">
-                product-focused websites & apps
+              <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
+                product-focused interfaces
               </span>{" "}
-              that turn ideas into revenue.
+              that turn complex ideas into usable products.
             </h1>
             <p className="mt-4 max-w-xl text-sm text-slate-300 md:text-base">
-              I help early-stage and growing teams design, prototype, and ship
-              digital products that feel effortless to use — without sacrificing
-              performance or accessibility.
+              From first prototype to production-ready UI, I help teams design,
+              refine, and ship digital experiences that feel fast, intuitive,
+              and trustworthy.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <Link
                 href="/contact"
-                className="rounded-full bg-sky-500 px-5 py-2.5 text-sm font-medium text-slate-950 shadow-sm transition hover:bg-sky-400"
+                className="rounded-full bg-cyan-500 px-5 py-2.5 text-sm font-medium text-slate-950 shadow-sm transition hover:bg-cyan-400"
               >
                 Get a project quote
               </Link>
               <Link
                 href="/portfolio"
-                className="rounded-full border border-slate-600 px-5 py-2.5 text-sm font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
+                className="rounded-full border border-slate-600/80 px-5 py-2.5 text-sm font-medium text-slate-100 hover:border-cyan-400 hover:text-cyan-300"
               >
                 View portfolio
               </Link>
@@ -92,178 +94,148 @@ export default function HomePage() {
             </p>
           </div>
 
+          {/* Right: techy dashboard mock + video */}
           <div className="flex-1">
-            <div className="relative mx-auto max-w-sm rounded-3xl border border-slate-800 bg-slate-900/60 p-4 shadow-xl">
-              <div className="mb-4 flex items-center justify-between text-xs text-slate-400">
-                <span>Product dashboard</span>
-                <span>Live preview</span>
-              </div>
-              <div className="grid gap-3">
-                <div className="h-24 rounded-xl border border-slate-800 bg-slate-900" />
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="h-16 rounded-lg border border-slate-800 bg-slate-900" />
-                  <div className="h-16 rounded-lg border border-slate-800 bg-slate-900" />
-                  <div className="h-16 rounded-lg border border-slate-800 bg-slate-900" />
+            <div className="relative mx-auto max-w-sm">
+              <div className="relative overflow-hidden rounded-3xl border border-cyan-400/30 bg-slate-900/80 shadow-[0_0_60px_rgba(45,212,191,0.35)]">
+                {/* subtle gradient overlay */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-fuchsia-500/20" />
+
+                <div className="relative z-10 p-4">
+                  <div className="mb-4 flex items-center justify-between text-xs text-slate-300">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+                      Live product metrics
+                    </span>
+                    <span>Next Forge Pro</span>
+                  </div>
+
+                  {/* Video panel */}
+                  <div className="relative mb-4 h-40 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/80">
+                    <video
+                      className="h-full w-full object-cover"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                    >
+                      <source
+                        src="/cascadingcodenorthtosouthneongreen.mp4"
+                        type="video/mp4"
+                      />
+                      Your browser does not support the video tag.
+                    </video>
+                    {/* dark overlay so motion doesn’t overpower the UI */}
+                    <div className="pointer-events-none absolute inset-0 bg-slate-950/40" />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 text-xs text-slate-200">
+                    <div className="rounded-lg border border-slate-800/80 bg-slate-950/80 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
+                        Launch readiness
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-cyan-300">
+                        92%
+                      </p>
+                      <p className="mt-1 text-[11px] text-emerald-400">
+                        +18% vs last sprint
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-800/80 bg-slate-950/80 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
+                        Conversion
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-slate-50">
+                        4.2%
+                      </p>
+                      <p className="mt-1 text-[11px] text-emerald-400">
+                        +0.8 pts
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-800/80 bg-slate-950/80 p-3">
+                      <p className="text-[10px] uppercase tracking-[0.16em] text-slate-400">
+                        Support tickets
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-slate-50">
+                        −35%
+                      </p>
+                      <p className="mt-1 text-[11px] text-cyan-300">
+                        Post-redesign
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-slate-400">
-                High-fidelity mockups, clickable prototypes, and developer-ready
-                handoff.
-              </p>
+
+              {/* Extra glow accent */}
+              <div className="pointer-events-none absolute -left-10 -top-10 h-24 w-24 rounded-full bg-cyan-500/40 blur-3xl" />
             </div>
           </div>
         </div>
       </Section>
 
+      {/* REST OF PAGE (services, projects, testimonials) – you can keep your existing sections, they’ll inherit the new theme nicely */}
       <Section
-        id="services"
         eyebrow="Services"
-        title="What I can help you build"
-        kicker="From first sketch to final handoff, I design digital products that align with your goals and your users’ needs."
+        title="Design support for product-focused teams"
+        kicker="From first launch to iterative product work, I partner with teams to design interfaces that ship."
       >
         <div className="grid gap-6 md:grid-cols-3">
           {services.map((service) => (
-            <div
+            <article
               key={service.name}
-              className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
+              className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5 text-sm text-slate-200 shadow-[0_0_24px_rgba(15,23,42,0.8)]"
             >
               <h3 className="text-sm font-semibold text-slate-50">
                 {service.name}
               </h3>
-              <p className="mt-2 text-sm text-slate-300">
-                {service.description}
-              </p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 text-sm text-slate-300">
-          <p>
-            I combine UX research, interaction design, and visual polish to
-            ship interfaces that feel intuitive from the first tap.
-          </p>
-        </div>
-      </Section>
-
-      <Section
-        id="featured-work"
-        eyebrow="Portfolio"
-        title="Selected client projects"
-        kicker="Each project starts with a clear problem, a focused strategy, and measurable outcomes."
-      >
-        <div className="grid gap-6 md:grid-cols-2">
-          {featuredProjects.map((project) => (
-            <article
-              key={project.title}
-              className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
-            >
-              <div className="h-32 rounded-xl border border-slate-800 bg-slate-950/80" />
-              <h3 className="mt-4 text-sm font-semibold text-slate-50">
-                {project.title}
-              </h3>
-              <p className="mt-1 text-xs text-slate-400">{project.role}</p>
-              <p className="mt-3 text-sm text-slate-300">{project.outcome}</p>
-              <Link
-                href="/portfolio"
-                className="mt-4 text-sm font-medium text-sky-300 hover:text-sky-200"
-              >
-                View full case study →
-              </Link>
+              <p className="mt-2 text-slate-300">{service.description}</p>
             </article>
           ))}
         </div>
       </Section>
 
       <Section
-        id="testimonials"
-        eyebrow="Social proof"
-        title="Clients I’ve partnered with"
-        kicker="I work closely with founders, PMs, and engineering teams to ship work that actually moves numbers."
+        eyebrow="Selected work"
+        title="Recent projects"
+        kicker="A sample of past collaborations and outcomes."
       >
-        <div className="mb-6 flex flex-wrap items-center gap-4 text-xs text-slate-500">
-          <span>Trusted by teams at</span>
-          <span className="rounded-full border border-slate-800 px-3 py-1">
-            Looply
-          </span>
-          <span className="rounded-full border border-slate-800 px-3 py-1">
-            Nimbus
-          </span>
-          <span className="rounded-full border border-slate-800 px-3 py-1">
-            Finch
-          </span>
-        </div>
         <div className="grid gap-6 md:grid-cols-2">
-          {testimonials.map((t) => (
-            <figure
-              key={t.name}
-              className="flex flex-col rounded-2xl border border-slate-800 bg-slate-900/60 p-5"
+          {featuredProjects.map((project) => (
+            <article
+              key={project.title}
+              className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-sm text-slate-200"
             >
-              <p className="text-sm text-slate-200">“{t.quote}”</p>
-              <figcaption className="mt-4 text-xs text-slate-400">
-                <span className="font-medium text-slate-200">{t.name}</span>{" "}
-                · {t.role}
-              </figcaption>
-            </figure>
+              <h3 className="text-base font-semibold text-slate-50">
+                {project.title}
+              </h3>
+              <p className="mt-1 text-xs text-cyan-300">{project.role}</p>
+              <p className="mt-3 text-sm text-slate-300">{project.outcome}</p>
+            </article>
           ))}
         </div>
       </Section>
 
       <Section
-        id="resources"
-        eyebrow="Resources"
-        title="Articles & resources for product teams"
-        kicker="Short, practical posts on UX, product launches, and design workflows."
+        eyebrow="Testimonials"
+        title="Teams I’ve partnered with"
+        kicker="A few words from people I’ve worked with on launches, redesigns, and product iterations."
       >
-        <div className="grid gap-4 md:grid-cols-3">
-          <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm">
-            <h3 className="font-semibold text-slate-50">
-              Designing a mobile onboarding that doesn’t leak users
-            </h3>
-            <p className="mt-2 text-slate-300">
-              A checklist for frictionless first sessions on iOS and Android.
-            </p>
-          </article>
-          <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm">
-            <h3 className="font-semibold text-slate-50">
-              How to brief a freelance designer (and get better work)
-            </h3>
-            <p className="mt-2 text-slate-300">
-              A simple template founders can use to scope their next project.
-            </p>
-          </article>
-          <article className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm">
-            <h3 className="font-semibold text-slate-50">
-              From Figma to production: smooth handoff for dev teams
-            </h3>
-            <p className="mt-2 text-slate-300">
-              My process for design systems, specs, and async collaboration.
-            </p>
-          </article>
-        </div>
-      </Section>
-
-      <Section className="border-b-0 bg-slate-950">
-        <div className="rounded-3xl border border-slate-800 bg-gradient-to-r from-sky-500/10 via-slate-950 to-slate-950 p-6 md:p-8">
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Ready to design your next product launch?
-          </h2>
-          <p className="mt-3 max-w-xl text-sm text-slate-200 md:text-base">
-            Tell me a bit about your product, timeline, and goals. I’ll respond
-            within one business day with next steps and a rough estimate.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/contact"
-              className="rounded-full bg-sky-500 px-5 py-2.5 text-sm font-medium text-slate-950 hover:bg-sky-400"
+        <div className="grid gap-6 md:grid-cols-2">
+          {testimonials.map((t) => (
+            <figure
+              key={t.name}
+              className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-sm text-slate-200"
             >
-              Book a free intro call
-            </Link>
-            <Link
-              href="/services"
-              className="rounded-full border border-slate-600 px-5 py-2.5 text-sm font-medium text-slate-100 hover:border-sky-400 hover:text-sky-300"
-            >
-              View services & pricing
-            </Link>
-          </div>
+              <blockquote className="text-slate-300">
+                “{t.quote}”
+              </blockquote>
+              <figcaption className="mt-3 text-xs text-slate-400">
+                <span className="font-medium text-slate-200">{t.name}</span> ·{" "}
+                {t.role}
+              </figcaption>
+            </figure>
+          ))}
         </div>
       </Section>
     </>
