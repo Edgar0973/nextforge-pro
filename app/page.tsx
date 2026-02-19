@@ -34,14 +34,14 @@ const services = [
 
 const testimonials = [
   {
-    name: "Sarah Gomez",
-    role: "Founder, Looply",
+    name: "Saidy E. Ferguson",
+    role: "Owner Of Saidys Kitchen",
     quote:
-      "Alex translated a vague product idea into a polished app experience that our users love.",
+      "Edgardo Lopez translated a vague product idea into a polished app experience that my users love.",
   },
   {
-    name: "James Wu",
-    role: "Head of Growth, Nimbus",
+    name: " Mitchell",
+    role: "ADPAutomotive",
     quote:
       "Our new marketing site cut customer support tickets in half and boosted demo requests.",
   },

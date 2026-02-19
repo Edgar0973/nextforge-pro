@@ -4,20 +4,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: Request) {
   try {
-    let body: any;
-
-    // Safely parse JSON
-    try {
-      body = await request.json();
-    } catch (err) {
-      console.error("Error parsing JSON body:", err);
-      return NextResponse.json(
-        { error: "Invalid JSON payload." },
-        { status: 400 }
-      );
-    }
-
-    const { name, email, message, sourcePage } = body ?? {};
+    const body = await request.json();
+    const { name, email, message, company, sourcePage } = body;
 
     // Basic validation
     if (!email || !message) {
@@ -33,6 +21,7 @@ export async function POST(request: Request) {
         type: "contact",
         name: name || null,
         email,
+        company: company || null,
         message,
         source_page: sourcePage || "/contact",
       })
@@ -43,8 +32,9 @@ export async function POST(request: Request) {
       console.error("Supabase insert error (contact):", error);
       return NextResponse.json(
         {
-          error: "Failed to save your message. Please try again later.",
-          details: error.message, // helpful during dev
+          error:
+            error.message ||
+            "Failed to save your message. Please try again later.",
         },
         { status: 500 }
       );
@@ -58,16 +48,11 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
-  } catch (err: any) {
-    console.error("Contact API error (outer):", err);
+  } catch (err) {
+    console.error("Contact API error:", err);
     return NextResponse.json(
-      {
-        error: "Unexpected server error.",
-        details: err?.message ?? String(err),
-      },
-      { status: 500 }
+      { error: "Invalid request." },
+      { status: 400 }
     );
   }
 }
-
-
