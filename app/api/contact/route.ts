@@ -1,40 +1,68 @@
-// app/api/contact/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-export async function POST(request: Request) {
+type ContactPayload = {
+  name?: string;
+  email: string;
+  message: string;
+  company?: string;
+  sourcePage?: string;
+};
+
+export async function POST(req: NextRequest) {
+  // Ensure Supabase admin client exists
+  if (!supabaseAdmin) {
+    console.error("[/api/contact] supabaseAdmin is not configured.");
+    return NextResponse.json(
+      {
+        error:
+          "Server configuration error: Supabase credentials are missing. Please try again later.",
+      },
+      { status: 500 }
+    );
+  }
+
+  let body: ContactPayload;
+
   try {
-    const body = await request.json();
-    const { name, email, message, company, sourcePage } = body;
+    body = (await req.json()) as ContactPayload;
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid request body." },
+      { status: 400 }
+    );
+  }
 
-    // Basic validation
-    if (!email || !message) {
-      return NextResponse.json(
-        { error: "Email and message are required." },
-        { status: 400 }
-      );
-    }
+  const { name, email, message, company, sourcePage } = body;
 
+  if (!email || !message) {
+    return NextResponse.json(
+      { error: "Email and message are required." },
+      { status: 400 }
+    );
+  }
+
+  try {
     const { data, error } = await supabaseAdmin
       .from("leads")
       .insert({
         type: "contact",
-        name: name || null,
+        name: name ?? null,
         email,
-        company: company || null,
         message,
-        source_page: sourcePage || "/contact",
+        source_page: sourcePage ?? "/contact",
+        company: company ?? null,
+        // user_agent, ip can be added later
       })
       .select()
       .maybeSingle();
 
     if (error) {
-      console.error("Supabase insert error (contact):", error);
+      console.error("[/api/contact] Supabase insert error:", error);
       return NextResponse.json(
         {
           error:
-            error.message ||
-            "Failed to save your message. Please try again later.",
+            "Something went wrong while saving your message. Please try again.",
         },
         { status: 500 }
       );
@@ -43,16 +71,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "Thanks for reaching out — I’ll get back to you shortly.",
-        lead: data,
+        lead: data ?? null,
       },
       { status: 200 }
     );
   } catch (err) {
-    console.error("Contact API error:", err);
+    console.error("[/api/contact] Unexpected error:", err);
     return NextResponse.json(
-      { error: "Invalid request." },
-      { status: 400 }
+      { error: "Unexpected error while submitting your message." },
+      { status: 500 }
     );
   }
 }
