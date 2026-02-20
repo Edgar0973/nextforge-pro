@@ -8,10 +8,11 @@ type QuotePayload = {
   projectType?: string;
   budget?: string;
   timeline?: string;
-  projectDetails?: string; // made optional so we can also accept `message`
+  projectDetails?: string; // optional – we'll normalize below
   sourcePage?: string;
   // allow for legacy/message-style payloads
   message?: string;
+  details?: string; // 🔑 support the current form's `name="details"`
 };
 
 export async function POST(req: NextRequest) {
@@ -50,9 +51,9 @@ export async function POST(req: NextRequest) {
   // Normalize email
   const email = (rawEmail ?? "").trim();
 
-  // 🔑 Accept both `projectDetails` and `message` from the client
+  // 🔑 Accept `projectDetails`, `details`, or `message` from the client
   const rawProjectDetails =
-    body.projectDetails ?? body.message ?? "";
+    body.projectDetails ?? body.details ?? body.message ?? "";
 
   const projectDetails =
     typeof rawProjectDetails === "string"
