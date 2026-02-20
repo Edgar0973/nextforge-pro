@@ -8,8 +8,10 @@ type QuotePayload = {
   projectType?: string;
   budget?: string;
   timeline?: string;
-  projectDetails: string;
+  projectDetails?: string; // made optional so we can also accept `message`
   sourcePage?: string;
+  // allow for legacy/message-style payloads
+  message?: string;
 };
 
 export async function POST(req: NextRequest) {
@@ -37,14 +39,25 @@ export async function POST(req: NextRequest) {
 
   const {
     name,
-    email,
+    email: rawEmail,
     company,
     projectType,
     budget,
     timeline,
-    projectDetails,
     sourcePage,
   } = body;
+
+  // Normalize email
+  const email = (rawEmail ?? "").trim();
+
+  // 🔑 Accept both `projectDetails` and `message` from the client
+  const rawProjectDetails =
+    body.projectDetails ?? body.message ?? "";
+
+  const projectDetails =
+    typeof rawProjectDetails === "string"
+      ? rawProjectDetails.trim()
+      : "";
 
   if (!email || !projectDetails) {
     return NextResponse.json(
@@ -64,7 +77,7 @@ export async function POST(req: NextRequest) {
         project_type: projectType ?? null,
         budget: budget ?? null,
         timeline: timeline ?? null,
-        message: projectDetails,
+        message: projectDetails, // always the normalized value
         source_page: sourcePage ?? "/quote",
       })
       .select()
