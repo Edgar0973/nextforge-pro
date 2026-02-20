@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendLeadNotification, LeadRecord } from "@/lib/leadNotifications";
 
 type ContactPayload = {
   name?: string;
@@ -66,6 +67,19 @@ export async function POST(req: NextRequest) {
         },
         { status: 500 }
       );
+    }
+
+    // Best-effort notification – do not fail the request if this throws
+    if (data) {
+      const lead = data as unknown as LeadRecord;
+      try {
+        await sendLeadNotification(lead);
+      } catch (notifyErr) {
+        console.error(
+          "[/api/contact] Failed to send lead notification:",
+          notifyErr
+        );
+      }
     }
 
     return NextResponse.json(
