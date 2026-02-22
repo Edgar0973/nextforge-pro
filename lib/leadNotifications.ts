@@ -1,5 +1,5 @@
 import "server-only";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export type LeadType = "contact" | "quote";
 
@@ -24,13 +24,26 @@ const QUOTE_NOTIFY_EMAIL =
 
 const EMAILS_DISABLED = process.env.DISABLE_LEAD_EMAILS === "1";
 
-const OUTLOOK_SMTP_HOST =
-  process.env.OUTLOOK_SMTP_HOST ?? "smtp-mail.outlook.com";
-const OUTLOOK_SMTP_PORT = process.env.OUTLOOK_SMTP_PORT
-  ? Number(process.env.OUTLOOK_SMTP_PORT)
-  : 587;
-const OUTLOOK_SMTP_USER = process.env.OUTLOOK_SMTP_USER ?? "";
-const OUTLOOK_SMTP_PASS = process.env.OUTLOOK_SMTP_PASS ?? "";
+const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
+const RESEND_FROM_EMAIL =
+  process.env.RESEND_FROM_EMAIL ?? "Next Forge Pro <notifications@nextforgepro.com>";
+
+let resendClient: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!RESEND_API_KEY) {
+    console.warn(
+      "[leadNotifications] RESEND_API_KEY not set; will log emails instead of sending."
+    );
+    return null;
+  }
+
+  if (!resendClient) {
+    resendClient = new Resend(RESEND_API_KEY);
+  }
+
+  return resendClient;
+}
 
 /**
  * Build a subject line for the lead notification.
@@ -79,33 +92,11 @@ function buildPlainTextBody(lead: LeadRecord): string {
 }
 
 /**
- * Create a Nodemailer transporter for Outlook SMTP.
- */
-function createTransport() {
-  if (!OUTLOOK_SMTP_USER || !OUTLOOK_SMTP_PASS) {
-    console.warn(
-      "[leadNotifications] OUTLOOK_SMTP_USER or OUTLOOK_SMTP_PASS not set; will log emails instead of sending."
-    );
-    return null;
-  }
-
-  return nodemailer.createTransport({
-    host: OUTLOOK_SMTP_HOST,
-    port: OUTLOOK_SMTP_PORT,
-    secure: OUTLOOK_SMTP_PORT === 465, // false for 587
-    auth: {
-      user: OUTLOOK_SMTP_USER,
-      pass: OUTLOOK_SMTP_PASS,
-    },
-  });
-}
-
-/**
- * Send (or log) a lead notification.
+ * Send (or log) a lead notification via Resend.
  *
  * - If DISABLE_LEAD_EMAILS=1  → no-op, just logs that emails are disabled.
- * - If SMTP envs are missing → logs the email contents (dev-safe).
- * - If SMTP is configured    → attempts to send via Outlook, logs failures.
+ * - If RESEND_API_KEY missing → logs the email contents (dev-safe).
+ * - If Resend is configured   → attempts to send via Resend, logs failures.
  *
  * Safe to `await` inside API routes; it never throws out of this function.
  */
@@ -134,35 +125,34 @@ export async function sendLeadNotification(lead: LeadRecord) {
   console.log("To:", to);
   console.log("Subject:", subject);
 
-  const transporter = createTransport();
+  const resend = getResendClient();
 
-  // If no transporter (SMTP not configured), just log the body and exit.
-  if (!transporter) {
+  // If no Resend client (API key not configured), just log the body and exit.
+  if (!resend) {
     console.log(
-      "[leadNotifications] SMTP not configured; logging body instead of sending.\n"
+      "[leadNotifications] Resend not configured; logging body instead of sending.\n"
     );
     console.log("Body:\n" + text + "\n");
     return;
   }
 
   try {
-    const info = await transporter.sendMail({
-      from: `Next Forge Pro <${OUTLOOK_SMTP_USER || to}>`,
-      to,
+    const result = await resend.emails.send({
+      from: RESEND_FROM_EMAIL,
+      to: [to],
       subject,
       text,
-      replyTo: lead.email || undefined,
     });
 
     console.log(
-      "[leadNotifications] Email sent successfully via Outlook SMTP for lead:",
+      "[leadNotifications] Email sent successfully via Resend for lead:",
       lead.id,
-      "MessageId:",
-      info.messageId
+      "Result ID:",
+      result?.data?.id ?? "(no id)"
     );
   } catch (err) {
     console.error(
-      "[leadNotifications] Failed to send email via Outlook SMTP; falling back to log-only:",
+      "[leadNotifications] Failed to send email via Resend; falling back to log-only:",
       err
     );
     console.log("Body:\n" + text + "\n");
