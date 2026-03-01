@@ -1,0 +1,37 @@
+PS C:\Users\user\Desktop\nextforge-pro> cd "C:\Users\user\Desktop\nextforge-pro"
+PS C:\Users\user\Desktop\nextforge-pro> node .\scripts\email-debug.cjs
+[email-debug] Loading .env.local from: C:\Users\user\Desktop\nextforge-pro\.env.local
+[dotenv@17.3.1] injecting env (9) from .env.local -- tip: 🛡️ auth for agents: https://vestauth.com
+
+[email-debug] Environment summary (safe view):
+  DISABLE_LEAD_EMAILS: 0
+  CONTACT_NOTIFY_EMAIL: contact@nextforgepro.com
+  QUOTE_NOTIFY_EMAIL:   quotes@nextforgepro.com
+  OUTLOOK_SMTP_HOST:    smtp-mail.outlook.com
+  OUTLOOK_SMTP_PORT:    587
+  OUTLOOK_SMTP_USER:    nextforgepro@outlook.com
+  OUTLOOK_SMTP_PASS:    (SET, HIDDEN)
+
+[email-debug] Attempting to send test email...
+  From: nextforgepro@outlook.com
+  To:   contact@nextforgepro.com
+  Subj: Next Forge Pro SMTP Debug Test
+
+[email-debug] ERROR sending email via Outlook SMTP:
+Error: Invalid login: 535 5.7.139 Authentication unsuccessful, SmtpClientAuthentication is disabled for the Mailbox. Visit https://aka.ms/smtp_auth_disabled for more information. [BL1PR13CA0359.namprd13.prod.outlook.com 2026-02-22T02:05:22.037Z 08DE717B2F1723FB]
+    at SMTPConnection._formatError (C:\Users\user\Desktop\nextforge-pro\node_modules\nodemailer\lib\smtp-connection\index.js:912:19)
+    at SMTPConnection._actionAUTHComplete (C:\Users\user\Desktop\nextforge-pro\node_modules\nodemailer\lib\smtp-connection\index.js:1722:34)
+    at SMTPConnection.<anonymous> (C:\Users\user\Desktop\nextforge-pro\node_modules\nodemailer\lib\smtp-connection\index.js:1676:18)
+    at SMTPConnection._processResponse (C:\Users\user\Desktop\nextforge-pro\node_modules\nodemailer\lib\smtp-connection\index.js:1098:20)
+    at SMTPConnection._onData (C:\Users\user\Desktop\nextforge-pro\node_modules\nodemailer\lib\smtp-connection\index.js:872:14)
+    at SMTPConnection._onSocketData (C:\Users\user\Desktop\nextforge-pro\node_modules\nodemailer\lib\smtp-connection\index.js:196:44)
+    at TLSSocket.emit (node:events:519:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5) {
+  code: 'EAUTH',
+  response: '535 5.7.139 Authentication unsuccessful, SmtpClientAuthentication is disabled for the Mailbox. Visit https://aka.ms/smtp_auth_disabled for more information. [BL1PR13CA0359.namprd13.prod.outlook.com 2026-02-22T02:05:22.037Z 08DE717B2F1723FB]',
+  responseCode: 535,
+  command: 'AUTH LOGIN'
+}
+PS C:\Users\user\Desktop\nextforge-pro>

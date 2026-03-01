@@ -26,7 +26,17 @@ const EMAILS_DISABLED = process.env.DISABLE_LEAD_EMAILS === "1";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 const RESEND_FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL ?? "Next Forge Pro <notifications@nextforgepro.com>";
+  process.env.RESEND_FROM_EMAIL ??
+  "Next Forge Pro <notifications@nextforgepro.com>";
+
+// Log configuration at module load (shows up once per cold start)
+console.log("[leadNotifications] Module loaded with config:", {
+  EMAILS_DISABLED,
+  HAS_RESEND_API_KEY: !!RESEND_API_KEY,
+  RESEND_FROM_EMAIL,
+  CONTACT_NOTIFY_EMAIL,
+  QUOTE_NOTIFY_EMAIL,
+});
 
 let resendClient: Resend | null = null;
 
@@ -40,6 +50,7 @@ function getResendClient(): Resend | null {
 
   if (!resendClient) {
     resendClient = new Resend(RESEND_API_KEY);
+    console.log("[leadNotifications] Resend client created.");
   }
 
   return resendClient;
@@ -102,16 +113,27 @@ function buildPlainTextBody(lead: LeadRecord): string {
  */
 export async function sendLeadNotification(lead: LeadRecord) {
   if (EMAILS_DISABLED) {
-    console.log("[leadNotifications] Emails disabled; skipping send.");
+    console.log(
+      "[leadNotifications] Emails disabled via DISABLE_LEAD_EMAILS; skipping send.",
+      { leadId: lead.id, type: lead.type }
+    );
     return;
   }
 
   const to =
     lead.type === "quote" ? QUOTE_NOTIFY_EMAIL : CONTACT_NOTIFY_EMAIL;
 
+  console.log("[leadNotifications] Preparing notification:", {
+    leadId: lead.id,
+    type: lead.type,
+    to,
+    from: RESEND_FROM_EMAIL,
+    HAS_RESEND_API_KEY: !!RESEND_API_KEY,
+  });
+
   if (!to) {
     console.warn(
-      "[leadNotifications] No destination email (CONTACT_NOTIFY_EMAIL / QUOTE_NOTIFY_EMAIL) configured; logging only."
+      "[leadNotifications] No destination email configured (CONTACT_NOTIFY_EMAIL / QUOTE_NOTIFY_EMAIL); logging only."
     );
     console.log(buildPlainTextBody(lead));
     return;
@@ -139,17 +161,16 @@ export async function sendLeadNotification(lead: LeadRecord) {
   try {
     const result = await resend.emails.send({
       from: RESEND_FROM_EMAIL,
-      to: [to],
+      to,
       subject,
       text,
     });
 
-    console.log(
-      "[leadNotifications] Email sent successfully via Resend for lead:",
-      lead.id,
-      "Result ID:",
-      result?.data?.id ?? "(no id)"
-    );
+    console.log("[leadNotifications] Email sent via Resend:", {
+      leadId: lead.id,
+      to,
+      resultId: result?.data?.id ?? "(no id)",
+    });
   } catch (err) {
     console.error(
       "[leadNotifications] Failed to send email via Resend; falling back to log-only:",

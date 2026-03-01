@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "debug:email": "node scripts/debug-email-setup.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
@@ -15,7 +16,7 @@
     "nodemailer": "^8.0.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "resend": "^6.9.2"
+    "resend": "^6.9.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

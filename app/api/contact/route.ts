@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendLeadNotification, LeadRecord } from "@/lib/leadNotifications";
 
+export const runtime = "nodejs";
+
 type ContactPayload = {
   name?: string;
   email: string;
@@ -11,6 +13,8 @@ type ContactPayload = {
 };
 
 export async function POST(req: NextRequest) {
+  console.log("[/api/contact] handler START");
+
   // Ensure Supabase admin client exists
   if (!supabaseAdmin) {
     console.error("[/api/contact] supabaseAdmin is not configured.");
@@ -27,7 +31,9 @@ export async function POST(req: NextRequest) {
 
   try {
     body = (await req.json()) as ContactPayload;
-  } catch {
+    console.log("[/api/contact] parsed request body:", body);
+  } catch (err) {
+    console.error("[/api/contact] Failed to parse JSON body:", err);
     return NextResponse.json(
       { error: "Invalid request body." },
       { status: 400 }
@@ -37,6 +43,7 @@ export async function POST(req: NextRequest) {
   const { name, email, message, company, sourcePage } = body;
 
   if (!email || !message) {
+    console.warn("[/api/contact] Missing required fields:", { email, message });
     return NextResponse.json(
       { error: "Email and message are required." },
       { status: 400 }
@@ -69,16 +76,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log("[/api/contact] Supabase insert success:", {
+      leadId: data?.id,
+      email: data?.email,
+    });
+
     // Best-effort notification – do not fail the request if this throws
     if (data) {
       const lead = data as unknown as LeadRecord;
+
+      console.log("[/api/contact] About to call sendLeadNotification with:", {
+        leadId: lead.id,
+        type: lead.type,
+        email: lead.email,
+        DISABLE_LEAD_EMAILS: process.env.DISABLE_LEAD_EMAILS,
+        HAS_RESEND_API_KEY: !!process.env.RESEND_API_KEY,
+        RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+        CONTACT_NOTIFY_EMAIL: process.env.CONTACT_NOTIFY_EMAIL,
+      });
+
       try {
         await sendLeadNotification(lead);
+        console.log("[/api/contact] sendLeadNotification completed for:", {
+          leadId: lead.id,
+        });
       } catch (notifyErr) {
         console.error(
           "[/api/contact] Failed to send lead notification:",
           notifyErr
         );
+        // Intentionally do not fail the HTTP request here
       }
     }
 
