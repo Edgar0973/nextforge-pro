@@ -1,5 +1,6 @@
 import "server-only";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
 export type LeadType = "contact" | "quote";
 
@@ -18,47 +19,65 @@ export type LeadRecord = {
 };
 
 const CONTACT_NOTIFY_EMAIL =
-  process.env.CONTACT_NOTIFY_EMAIL ?? "contact@nextforgepro.com";
+  process.env.CONTACT_NOTIFY_EMAIL ?? "nextforgepro@outlook.com";
 const QUOTE_NOTIFY_EMAIL =
-  process.env.QUOTE_NOTIFY_EMAIL ?? "quotes@nextforgepro.com";
+  process.env.QUOTE_NOTIFY_EMAIL ?? "nextforgepro@outlook.com";
 
 const EMAILS_DISABLED = process.env.DISABLE_LEAD_EMAILS === "1";
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
-const RESEND_FROM_EMAIL =
-  process.env.RESEND_FROM_EMAIL ??
-  "Next Forge Pro <notifications@nextforgepro.com>";
+// Outlook SMTP config
+const OUTLOOK_SMTP_HOST =
+  process.env.OUTLOOK_SMTP_HOST ?? "smtp-mail.outlook.com";
+const OUTLOOK_SMTP_PORT = Number(process.env.OUTLOOK_SMTP_PORT ?? "587");
+const OUTLOOK_SMTP_USER = process.env.OUTLOOK_SMTP_USER ?? "";
+const OUTLOOK_SMTP_PASS = process.env.OUTLOOK_SMTP_PASS ?? "";
 
-// Log configuration at module load (shows up once per cold start)
-console.log("[leadNotifications] Module loaded with config:", {
+// Log config once per cold start
+console.log("[leadNotifications] Module loaded with Outlook SMTP config:", {
   EMAILS_DISABLED,
-  HAS_RESEND_API_KEY: !!RESEND_API_KEY,
-  RESEND_FROM_EMAIL,
+  OUTLOOK_SMTP_HOST,
+  OUTLOOK_SMTP_PORT,
+  HAS_OUTLOOK_USER: !!OUTLOOK_SMTP_USER,
+  HAS_OUTLOOK_PASS: !!OUTLOOK_SMTP_PASS,
   CONTACT_NOTIFY_EMAIL,
   QUOTE_NOTIFY_EMAIL,
 });
 
-let resendClient: Resend | null = null;
+let transporter: Transporter | null = null;
 
-function getResendClient(): Resend | null {
-  if (!RESEND_API_KEY) {
+function getTransporter(): Transporter | null {
+  if (!OUTLOOK_SMTP_HOST || !OUTLOOK_SMTP_USER || !OUTLOOK_SMTP_PASS) {
     console.warn(
-      "[leadNotifications] RESEND_API_KEY not set; will log emails instead of sending."
+      "[leadNotifications] Outlook SMTP not fully configured; will log emails instead of sending.",
+      {
+        OUTLOOK_SMTP_HOST,
+        HAS_OUTLOOK_USER: !!OUTLOOK_SMTP_USER,
+        HAS_OUTLOOK_PASS: !!OUTLOOK_SMTP_PASS,
+      }
     );
     return null;
   }
 
-  if (!resendClient) {
-    resendClient = new Resend(RESEND_API_KEY);
-    console.log("[leadNotifications] Resend client created.");
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: OUTLOOK_SMTP_HOST,
+      port: OUTLOOK_SMTP_PORT,
+      secure: OUTLOOK_SMTP_PORT === 465, // false for 587 (STARTTLS)
+      auth: {
+        user: OUTLOOK_SMTP_USER,
+        pass: OUTLOOK_SMTP_PASS,
+      },
+    });
+
+    console.log(
+      "[leadNotifications] Outlook SMTP transporter created for user:",
+      OUTLOOK_SMTP_USER
+    );
   }
 
-  return resendClient;
+  return transporter;
 }
 
-/**
- * Build a subject line for the lead notification.
- */
 function buildSubject(lead: LeadRecord): string {
   const who = lead.name || lead.email;
   if (lead.type === "quote") {
@@ -67,9 +86,6 @@ function buildSubject(lead: LeadRecord): string {
   return `New CONTACT from ${who}`;
 }
 
-/**
- * Build a plain-text body for the lead notification.
- */
 function buildPlainTextBody(lead: LeadRecord): string {
   let created = "N/A";
   try {
@@ -102,15 +118,6 @@ function buildPlainTextBody(lead: LeadRecord): string {
   ].join("\n");
 }
 
-/**
- * Send (or log) a lead notification via Resend.
- *
- * - If DISABLE_LEAD_EMAILS=1  → no-op, just logs that emails are disabled.
- * - If RESEND_API_KEY missing → logs the email contents (dev-safe).
- * - If Resend is configured   → attempts to send via Resend, logs failures.
- *
- * Safe to `await` inside API routes; it never throws out of this function.
- */
 export async function sendLeadNotification(lead: LeadRecord) {
   if (EMAILS_DISABLED) {
     console.log(
@@ -123,12 +130,11 @@ export async function sendLeadNotification(lead: LeadRecord) {
   const to =
     lead.type === "quote" ? QUOTE_NOTIFY_EMAIL : CONTACT_NOTIFY_EMAIL;
 
-  console.log("[leadNotifications] Preparing notification:", {
+  console.log("[leadNotifications] Preparing Outlook SMTP notification:", {
     leadId: lead.id,
     type: lead.type,
     to,
-    from: RESEND_FROM_EMAIL,
-    HAS_RESEND_API_KEY: !!RESEND_API_KEY,
+    fromUser: OUTLOOK_SMTP_USER,
   });
 
   if (!to) {
@@ -142,38 +148,37 @@ export async function sendLeadNotification(lead: LeadRecord) {
   const subject = buildSubject(lead);
   const text = buildPlainTextBody(lead);
 
-  // Always log what we're about to do (useful even in production)
-  console.log("\n[leadNotifications] New lead notification");
+  console.log("\n[leadNotifications] New lead notification (Outlook SMTP)");
   console.log("To:", to);
   console.log("Subject:", subject);
 
-  const resend = getResendClient();
+  const smtpTransporter = getTransporter();
 
-  // If no Resend client (API key not configured), just log the body and exit.
-  if (!resend) {
+  if (!smtpTransporter) {
     console.log(
-      "[leadNotifications] Resend not configured; logging body instead of sending.\n"
+      "[leadNotifications] Outlook SMTP not configured; logging body instead of sending.\n"
     );
     console.log("Body:\n" + text + "\n");
     return;
   }
 
   try {
-    const result = await resend.emails.send({
-      from: RESEND_FROM_EMAIL,
+    const info = await smtpTransporter.sendMail({
+      from: `Next Forge Pro <${OUTLOOK_SMTP_USER}>`,
       to,
       subject,
       text,
     });
 
-    console.log("[leadNotifications] Email sent via Resend:", {
+    console.log("[leadNotifications] Email sent via Outlook SMTP:", {
       leadId: lead.id,
       to,
-      resultId: result?.data?.id ?? "(no id)",
+      messageId: info.messageId,
+      response: info.response,
     });
   } catch (err) {
     console.error(
-      "[leadNotifications] Failed to send email via Resend; falling back to log-only:",
+      "[leadNotifications] Failed to send email via Outlook SMTP; falling back to log-only:",
       err
     );
     console.log("Body:\n" + text + "\n");
