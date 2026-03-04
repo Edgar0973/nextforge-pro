@@ -26,8 +26,13 @@ const EMAILS_DISABLED = process.env.DISABLE_LEAD_EMAILS === "1";
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? "";
 
+<<<<<<< HEAD
 // You said you *don’t* want contact@ as the default from.
 // Use a neutral notifications address instead; env can always override this.
+=======
+// You do NOT want contact@ as default from.
+// Use a neutral notifications address instead; env can override this.
+>>>>>>> dc32049 (Update lead notifications and add email debug script)
 const RESEND_FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ??
   "Next Forge Pro <notifications@nextforgepro.com>";
@@ -108,7 +113,11 @@ function buildPlainTextBody(lead: LeadRecord): string {
  *
  * Safe to `await` inside API routes; it never throws out of this function.
  */
+<<<<<<< HEAD
 export async function sendLeadNotification(lead: LeadRecord) {
+=======
+export async function sendLeadNotification(lead: LeadRecord): Promise<void> {
+>>>>>>> dc32049 (Update lead notifications and add email debug script)
   if (EMAILS_DISABLED) {
     console.log(
       "[leadNotifications] Emails disabled via DISABLE_LEAD_EMAILS; skipping send.",
@@ -160,8 +169,13 @@ export async function sendLeadNotification(lead: LeadRecord) {
       to: [to],
       subject,
       text,
+<<<<<<< HEAD
       // Make it easy to reply directly to the lead from Outlook
       reply_to: lead.email || undefined,
+=======
+      // Resend expects `replyTo` (camelCase)
+      replyTo: lead.email || undefined,
+>>>>>>> dc32049 (Update lead notifications and add email debug script)
     });
 
     console.log("[leadNotifications] Email sent via Resend:", {
