@@ -1,0 +1,172 @@
+[nav-introspect] Scanning project at: C:\Users\user\Desktop\nextforge-pro
+
+# Project File List (relative to root)
+
+FILE .env.local
+FILE .gitignore
+DIR  app
+DIR  app\about
+FILE app\about\page.tsx
+DIR  app\admin
+DIR  app\admin\leads
+FILE app\admin\leads\page.tsx
+DIR  app\api
+DIR  app\api\billing
+FILE app\api\billing\route.ts
+DIR  app\api\contact
+FILE app\api\contact\route.ts
+DIR  app\api\quotes
+FILE app\api\quotes\route.ts
+DIR  app\api\support
+FILE app\api\support\route.ts
+DIR  app\billing
+FILE app\billing\BillingForm.tsx
+FILE app\billing\page.tsx
+DIR  app\contact
+FILE app\contact\ContactForm.tsx
+FILE app\contact\page.tsx
+FILE app\favicon.ico
+FILE app\globals.css
+FILE app\layout.tsx
+FILE app\page.tsx
+DIR  app\portfolio
+FILE app\portfolio\page.tsx
+DIR  app\privacy
+FILE app\privacy\page.tsx
+DIR  app\quote
+FILE app\quote\page.tsx
+FILE app\quote\QuoteForm.tsx
+DIR  app\services
+FILE app\services\page.tsx
+DIR  app\support
+FILE app\support\page.tsx
+FILE app\support\supportForm.tsx
+DIR  app\terms
+FILE app\terms\page.tsx
+DIR  components
+FILE components\footer.tsx
+FILE components\header.tsx
+FILE components\section.tsx
+FILE eslint.config.mjs
+DIR  lib
+FILE lib\leadNotifications.ts
+FILE lib\supabaseAdmin.ts
+FILE nav-report.txt
+FILE next
+FILE next-env.d.ts
+FILE next.config.ts
+FILE nextforge-pro@0.1.0
+DIR  nextforgepro official scripts
+DIR  nextforgepro official scripts\email SMTP Debugging (Outlook)
+FILE nextforgepro official scripts\email SMTP Debugging (Outlook)\email-debug.cjs
+FILE nextforgepro official scripts\email SMTP Debugging (Outlook)\output.txt
+FILE nextforgepro official scripts\email SMTP Debugging (Outlook)\Run the debug script
+FILE package-lock.json
+FILE package.json
+FILE postcss.config.mjs
+FILE project-report.md
+FILE project-tree.ps1
+DIR  public
+FILE public\cascadingcodenorthtosouthneongreen.mp4
+FILE public\file.svg
+FILE public\globe.svg
+FILE public\neonbinary.mp4
+FILE public\next.svg
+FILE public\Screen Recording - Feb 17, 2026.mp4
+FILE public\vercel.svg
+FILE public\window.svg
+FILE README.md
+DIR  scripts
+FILE scripts\debug-email-flow.cjs
+FILE scripts\debug-email-setup.js
+FILE scripts\email-debug.cjs
+FILE scripts\nav-introspect.ts
+FILE scripts\project-report.ts
+DIR  scripts\Quick local Resend test script
+FILE scripts\Quick local Resend test script\resend-debug.cjs
+FILE scripts\resend-debug.cjs
+FILE tsconfig.json
+
+# Nav Label Search Results
+
+Searching for these labels: "Next Forge Pro", "Edgardo Lopez ┬╖ Web & App Design", "About", "Services", "Portfolio", "Contact", "Get a quote", "Get a Quote", "Request a Quote"
+
+MATCH "About" in app\about\page.tsx:3:25
+MATCH "About" in app\about\page.tsx:7:18
+MATCH "About" in app\api\contact\route.ts:88:35
+MATCH "Contact" in app\api\contact\route.ts:7:6
+MATCH "Contact" in app\api\contact\route.ts:30:13
+MATCH "Contact" in app\api\contact\route.ts:33:34
+MATCH "Next Forge Pro" in app\billing\page.tsx:5:21
+MATCH "Contact" in app\contact\ContactForm.tsx:1:16
+MATCH "Contact" in app\contact\ContactForm.tsx:8:25
+MATCH "Contact" in app\contact\ContactForm.tsx:76:22
+MATCH "Next Forge Pro" in app\contact\page.tsx:5:21
+MATCH "Next Forge Pro" in app\contact\page.tsx:7:67
+MATCH "Contact" in app\contact\page.tsx:2:8
+MATCH "Contact" in app\contact\page.tsx:2:28
+MATCH "Contact" in app\contact\page.tsx:5:11
+MATCH "Contact" in app\contact\page.tsx:10:25
+MATCH "Contact" in app\contact\page.tsx:16:13
+MATCH "Contact" in app\contact\page.tsx:28:10
+MATCH "Next Forge Pro" in app\layout.tsx:7:11
+MATCH "Next Forge Pro" in app\page.tsx:107:27
+MATCH "Services" in app\page.tsx:168:11
+MATCH "Services" in app\page.tsx:170:18
+MATCH "Portfolio" in app\portfolio\page.tsx:21:25
+MATCH "Portfolio" in app\portfolio\page.tsx:25:18
+MATCH "Next Forge Pro" in app\privacy\page.tsx:9:21
+MATCH "Next Forge Pro" in app\privacy\page.tsx:13:38
+MATCH "Next Forge Pro" in app\quote\page.tsx:4:37
+MATCH "Services" in app\services\page.tsx:3:25
+MATCH "Services" in app\services\page.tsx:7:18
+MATCH "Services" in app\services\page.tsx:212:46
+MATCH "Next Forge Pro" in app\terms\page.tsx:9:55
+MATCH "Next Forge Pro" in app\terms\page.tsx:13:44
+MATCH "Next Forge Pro" in components\footer.tsx:187:20
+MATCH "Contact" in components\footer.tsx:10:18
+MATCH "Contact" in components\footer.tsx:12:15
+MATCH "Contact" in components\footer.tsx:15:15
+MATCH "Next Forge Pro" in components\header.tsx:27:15
+MATCH "About" in components\header.tsx:7:29
+MATCH "Services" in components\header.tsx:8:32
+MATCH "Portfolio" in components\header.tsx:9:33
+MATCH "Contact" in components\header.tsx:10:31
+MATCH "Get a quote" in components\header.tsx:52:13
+MATCH "Get a quote" in components\header.tsx:89:15
+MATCH "Next Forge Pro" in lib\leadNotifications.ts:33:4
+MATCH "Next Forge Pro" in nav-report.txt:92:30
+MATCH "About" in nav-report.txt:92:85
+MATCH "Services" in nav-report.txt:92:94
+MATCH "Portfolio" in nav-report.txt:92:106
+MATCH "Contact" in nav-report.txt:26:18
+MATCH "Contact" in nav-report.txt:92:119
+MATCH "Get a quote" in nav-report.txt:92:130
+MATCH "Get a Quote" in nav-report.txt:92:145
+MATCH "Request a Quote" in nav-report.txt:92:160
+MATCH "Next Forge Pro" in nextforgepro official scripts\email SMTP Debugging (Outlook)\email-debug.cjs:100:20
+MATCH "Next Forge Pro" in nextforgepro official scripts\email SMTP Debugging (Outlook)\email-debug.cjs:112:14
+MATCH "Next Forge Pro" in nextforgepro official scripts\email SMTP Debugging (Outlook)\output.txt:18:9
+MATCH "Contact" in project-report.md:41:16
+MATCH "Contact" in project-report.md:75:16
+MATCH "Next Forge Pro" in scripts\debug-email-flow.cjs:33:4
+MATCH "Contact" in scripts\debug-email-setup.js:215:12
+MATCH "Contact" in scripts\debug-email-setup.js:259:17
+MATCH "Next Forge Pro" in scripts\email-debug.cjs:100:20
+MATCH "Next Forge Pro" in scripts\email-debug.cjs:112:14
+MATCH "Next Forge Pro" in scripts\nav-introspect.ts:8:36
+MATCH "Next Forge Pro" in scripts\nav-introspect.ts:49:4
+MATCH "Edgardo Lopez ┬╖ Web & App Design" in scripts\nav-introspect.ts:50:4
+MATCH "About" in scripts\nav-introspect.ts:8:52
+MATCH "About" in scripts\nav-introspect.ts:51:4
+MATCH "Services" in scripts\nav-introspect.ts:8:59
+MATCH "Services" in scripts\nav-introspect.ts:52:4
+MATCH "Portfolio" in scripts\nav-introspect.ts:53:4
+MATCH "Contact" in scripts\nav-introspect.ts:54:4
+MATCH "Get a quote" in scripts\nav-introspect.ts:55:4
+MATCH "Get a Quote" in scripts\nav-introspect.ts:56:4
+MATCH "Request a Quote" in scripts\nav-introspect.ts:57:4
+MATCH "Next Forge Pro" in scripts\Quick local Resend test script\resend-debug.cjs:23:36
+MATCH "Next Forge Pro" in scripts\resend-debug.cjs:23:36
+
+[nav-introspect] Done. If you send me this output, I can tell you exactly where your header/nav buttons live and whether theyΓÇÖre global (e.g. in app/layout.tsx or a shared header component).

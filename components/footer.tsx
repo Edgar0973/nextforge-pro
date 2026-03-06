@@ -1,4 +1,5 @@
-﻿import Link from "next/link";
+﻿// components/footer.tsx
+import Link from "next/link";
 
 export function Footer() {
   const year = new Date().getFullYear();
@@ -66,7 +67,8 @@ export function Footer() {
                 Terms
               </Link>
               <span className="text-slate-600">•</span>
-              <Link href="/policy" className="hover:text-sky-300">
+              {/* Disable prefetch to avoid 404 prefetch noise until /policy exists */}
+              <Link href="/policy" prefetch={false} className="hover:text-sky-300">
                 Policy
               </Link>
             </div>

@@ -1,3 +1,4 @@
+// app/contact/ContactForm.tsx
 "use client";
 
 import { useState, type FormEvent, type ChangeEvent } from "react";
@@ -8,7 +9,9 @@ export default function ContactForm() {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  function handleFieldChange(_e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  function handleFieldChange(
+    _e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) {
     // If the user starts editing after an error/success, go back to idle
     if (status === "error" || status === "success") {
       setStatus("idle");
@@ -177,5 +180,4 @@ export default function ContactForm() {
       </button>
     </form>
   );
-  
 }
