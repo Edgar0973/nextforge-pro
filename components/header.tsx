@@ -8,6 +8,8 @@ const links = [
   { href: "/services", label: "Services" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/contact", label: "Contact" },
+  { href: "/support", label: "Support" }, // 👈 added
+  { href: "/billing", label: "Billing" }, // 👈 added
 ];
 
 export function Header() {
@@ -45,10 +47,7 @@ export function Header() {
           ))}
 
           {/* Single CTA → /quote */}
-          <Link
-            href="/quote"
-            className="btn-pill hover:text-slate-950"
-          >
+          <Link href="/quote" className="btn-pill hover:text-slate-950">
             Get a quote
           </Link>
         </nav>
