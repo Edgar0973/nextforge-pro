@@ -9,49 +9,37 @@ export function Footer() {
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 text-sm text-slate-400 md:px-6">
         {/* Top: Contact + Social & platforms + Marketplaces */}
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Contact / phone + multiple emails + Terms/Policy */}
+          {/* Contact / forms + phone + Terms/Policy */}
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Contact
             </p>
 
+            {/* Use forms instead of direct email addresses */}
             <div className="space-y-1 text-sm text-slate-300">
-              <p>
-                General:&nbsp;
-                <a
-                  href="mailto:contact@nextforgepro.com"
-                  className="hover:text-sky-300"
-                >
-                  contact@nextforgepro.com
-                </a>
-              </p>
-              <p>
-                Billing:&nbsp;
-                <a
-                  href="mailto:billing@nextforgepro.com"
-                  className="hover:text-sky-300"
-                >
-                  billing@nextforgepro.com
-                </a>
-              </p>
-              <p>
-                Support:&nbsp;
-                <a
-                  href="mailto:support@nextforgepro.com"
-                  className="hover:text-sky-300"
-                >
-                  support@nextforgepro.com
-                </a>
-              </p>
-              <p>
-                Quotes:&nbsp;
-                <a
-                  href="mailto:quotes@nextforgepro.com"
-                  className="hover:text-sky-300"
-                >
-                  quotes@nextforgepro.com
-                </a>
-              </p>
+              <p>Use these forms to reach us:</p>
+              <ul className="mt-1 space-y-1">
+                <li>
+                  <Link href="/contact" className="hover:text-sky-300">
+                    General contact form
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/quote" className="hover:text-sky-300">
+                    Project quotes
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/support" className="hover:text-sky-300">
+                    Support (existing clients)
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/billing" className="hover:text-sky-300">
+                    Billing &amp; invoices
+                  </Link>
+                </li>
+              </ul>
             </div>
 
             <p className="text-sm text-slate-300">
