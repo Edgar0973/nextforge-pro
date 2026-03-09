@@ -1,6 +1,14 @@
+// app/api/quote/route.ts (rename/comment as appropriate)
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendLeadNotification, LeadRecord } from "@/lib/leadNotifications";
+import {
+  sendLeadNotification,
+  sendLeadReceipt,
+  LeadRecord,
+} from "@/lib/leadNotifications";
+import { sendLeadSmsReceipt } from "@/lib/telnyx";
+
+export const runtime = "nodejs";
 
 type QuotePayload = {
   name?: string;
@@ -94,9 +102,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Best-effort notification – do not fail the request if this throws
+    // Best-effort notifications – do not fail the request if these throw
     if (data) {
       const lead = data as unknown as LeadRecord;
+      const phone = (data as any)?.phone as string | undefined;
+
       try {
         await sendLeadNotification(lead);
       } catch (notifyErr) {
@@ -104,6 +114,30 @@ export async function POST(req: NextRequest) {
           "[/api/quote] Failed to send lead notification:",
           notifyErr
         );
+      }
+
+      try {
+        await sendLeadReceipt(lead);
+      } catch (receiptErr) {
+        console.error(
+          "[/api/quote] Failed to send customer receipt:",
+          receiptErr
+        );
+      }
+
+      if (phone) {
+        try {
+          await sendLeadSmsReceipt({
+            to: phone,
+            name: lead.name,
+            formType: "quote",
+          });
+        } catch (smsErr) {
+          console.error(
+            "[/api/quote] Failed to send SMS receipt:",
+            smsErr
+          );
+        }
       }
     }
 

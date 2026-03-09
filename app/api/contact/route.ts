@@ -1,6 +1,12 @@
+// app/api/contact/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendLeadNotification, LeadRecord } from "@/lib/leadNotifications";
+import {
+  sendLeadNotification,
+  sendLeadReceipt,
+  LeadRecord,
+} from "@/lib/leadNotifications";
+import { sendLeadSmsReceipt } from "@/lib/telnyx";
 
 export const runtime = "nodejs";
 
@@ -81,9 +87,10 @@ export async function POST(req: NextRequest) {
       email: data?.email,
     });
 
-    // Best-effort notification – do not fail the request if this throws
+    // Best-effort notifications – do not fail the request if these throw
     if (data) {
       const lead = data as unknown as LeadRecord;
+      const phone = (data as any)?.phone as string | undefined;
 
       console.log("[/api/contact] About to call sendLeadNotification with:", {
         leadId: lead.id,
@@ -105,7 +112,36 @@ export async function POST(req: NextRequest) {
           "[/api/contact] Failed to send lead notification:",
           notifyErr
         );
-        // Intentionally do not fail the HTTP request here
+      }
+
+      try {
+        await sendLeadReceipt(lead);
+        console.log("[/api/contact] sendLeadReceipt completed for:", {
+          leadId: lead.id,
+        });
+      } catch (receiptErr) {
+        console.error(
+          "[/api/contact] Failed to send customer receipt:",
+          receiptErr
+        );
+      }
+
+      if (phone) {
+        try {
+          await sendLeadSmsReceipt({
+            to: phone,
+            name: lead.name,
+            formType: "contact",
+          });
+          console.log("[/api/contact] sendLeadSmsReceipt completed for:", {
+            leadId: lead.id,
+          });
+        } catch (smsErr) {
+          console.error(
+            "[/api/contact] Failed to send SMS receipt:",
+            smsErr
+          );
+        }
       }
     }
 

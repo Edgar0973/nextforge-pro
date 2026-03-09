@@ -1,7 +1,14 @@
 // app/api/billing/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { sendLeadNotification } from "@/lib/leadNotifications";
+import {
+  sendLeadNotification,
+  sendLeadReceipt,
+  LeadRecord,
+} from "@/lib/leadNotifications";
+import { sendLeadSmsReceipt } from "@/lib/telnyx";
+
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   console.log("[api/billing] Handler start");
@@ -68,12 +75,49 @@ export async function POST(req: NextRequest) {
 
     console.log("[api/billing] Inserted row:", data);
 
-    // Fire-and-forget notification
-    try {
-      await sendLeadNotification(data);
-    } catch (err) {
-      console.error("[api/billing] Error sending notification:", err);
-    }
+    // Shape into LeadRecord for email/SMS helpers
+    const lead: LeadRecord = {
+      id: data.id,
+      type: data.type,
+      name: data.name,
+      email: data.email,
+      company: data.company,
+      project_type: null,
+      budget: null,
+      timeline: null,
+      message: data.message,
+      source_page: data.source_page,
+      created_at: data.created_at ?? new Date().toISOString(),
+    };
+
+    const phone = (data as any)?.phone as string | undefined;
+
+    // Fire-and-forget notifications (don’t break the API if these fail)
+    void (async () => {
+      try {
+        await sendLeadNotification(lead);
+      } catch (err) {
+        console.error("[api/billing] Error sending internal notification:", err);
+      }
+
+      try {
+        await sendLeadReceipt(lead);
+      } catch (err) {
+        console.error("[api/billing] Error sending customer receipt:", err);
+      }
+
+      if (phone) {
+        try {
+          await sendLeadSmsReceipt({
+            to: phone,
+            name: lead.name,
+            formType: "billing",
+          });
+        } catch (err) {
+          console.error("[api/billing] Error sending SMS receipt:", err);
+        }
+      }
+    })();
 
     return NextResponse.json({ success: true });
   } catch (err) {
