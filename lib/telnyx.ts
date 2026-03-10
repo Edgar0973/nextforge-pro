@@ -1,96 +1,104 @@
 // lib/telnyx.ts
-import Telnyx from 'telnyx';
+import "server-only";
+import telnyx from "telnyx";
 
-const telnyxApiKey = process.env.TELNYX_API_KEY;
-const telnyxFromNumber = process.env.TELNYX_FROM_NUMBER;
-const telnyxMessagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID;
+const apiKey = process.env.TELNYX_API_KEY || "";
+const fromNumber = process.env.TELNYX_FROM_NUMBER || "";
+const messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || "";
+const smsDisabled = process.env.DISABLE_LEAD_SMS === "1";
 
-const DISABLE_LEAD_SMS =
-  process.env.DISABLE_LEAD_SMS === '1' ||
-  process.env.DISABLE_LEAD_SMS === 'true';
+let client: any = null;
 
-if (!telnyxApiKey) {
-  console.warn('[Telnyx] TELNYX_API_KEY is not set. SMS will be disabled.');
-}
-
-const telnyxClient = telnyxApiKey
-  ? new Telnyx({ apiKey: telnyxApiKey })
-  : null;
-
-export type LeadFormType = 'contact' | 'quote' | 'support' | 'billing';
-
-interface SendLeadSmsReceiptOptions {
-  to: string;
-  name?: string | null;
-  formType: LeadFormType;
-}
-
-export async function sendLeadSmsReceipt(
-  options: SendLeadSmsReceiptOptions,
-): Promise<void> {
-  const { to, name, formType } = options;
-
-  if (DISABLE_LEAD_SMS) {
-    console.log('[Telnyx] DISABLE_LEAD_SMS is set. Skipping SMS.');
-    return;
+function getClient(): any {
+  if (!apiKey) {
+    console.warn("[telnyx] TELNYX_API_KEY not set; SMS will be logged only.");
+    return null;
   }
 
-  if (!telnyxClient) {
-    console.warn('[Telnyx] Client not initialized. Skipping SMS.');
+  if (!client) {
+    // Cast to any so we can call it without TS complaining
+    const telnyxFactory = telnyx as any;
+    client = telnyxFactory(apiKey);
+    console.log("[telnyx] Client initialized.");
+  }
+
+  return client;
+}
+
+type SmsReceiptParams = {
+  to: string;
+  name: string | null;
+  formType: "contact" | "quote" | "billing" | "support";
+};
+
+export async function sendLeadSmsReceipt({
+  to,
+  name,
+  formType,
+}: SmsReceiptParams): Promise<void> {
+  if (smsDisabled) {
+    console.log("[telnyx] SMS disabled via DISABLE_LEAD_SMS; skipping.", {
+      to,
+      formType,
+    });
     return;
   }
 
   if (!to) {
-    console.warn('[Telnyx] No destination phone number provided. Skipping SMS.');
+    console.warn("[telnyx] No destination phone number provided; skipping SMS.");
     return;
   }
 
-  if (!telnyxFromNumber && !telnyxMessagingProfileId) {
-    console.warn(
-      '[Telnyx] Neither TELNYX_FROM_NUMBER nor TELNYX_MESSAGING_PROFILE_ID set. Skipping SMS.',
+  const telnyxClient = getClient();
+  const sender = fromNumber;
+
+  const displayName = name || "there";
+
+  const message = (() => {
+    switch (formType) {
+      case "quote":
+        return `Hi ${displayName}, we received your quote request at Next Forge Pro. We'll review it and follow up shortly.`;
+      case "support":
+        return `Hi ${displayName}, we received your support request at Next Forge Pro and will get back to you soon.`;
+      case "billing":
+        return `Hi ${displayName}, we received your billing inquiry at Next Forge Pro. We'll review it and follow up shortly.`;
+      case "contact":
+      default:
+        return `Hi ${displayName}, we received your message at Next Forge Pro. We'll be in touch soon.`;
+    }
+  })();
+
+  console.log("[telnyx] Preparing SMS:", {
+    from: sender,
+    to,
+    formType,
+    messagingProfileId,
+  });
+
+  if (!telnyxClient || !sender) {
+    console.log(
+      "[telnyx] Missing client or fromNumber; logging SMS instead of sending.",
+      { to, message }
     );
     return;
   }
 
-  const text = buildSmsBody({
-    name: name?.trim() || 'there',
-    formType,
-  });
-
-  const payload: Record<string, unknown> = {
+  const payload = {
+    from: sender,
     to,
-    text,
-    type: 'SMS',
+    text: message,
+    // messaging_profile_id is optional but recommended
+    messaging_profile_id: messagingProfileId || undefined,
   };
 
-  if (telnyxFromNumber) {
-    payload.from = telnyxFromNumber;
-  }
-  if (telnyxMessagingProfileId) {
-    payload.messaging_profile_id = telnyxMessagingProfileId;
-  }
-
   try {
-    const res = await telnyxClient.messages.send(payload);
-    console.log('[Telnyx] SMS sent:', res?.data?.data?.id ?? res?.data);
-  } catch (error) {
-    console.error('[Telnyx] Failed to send SMS receipt', error);
-  }
-}
-
-function buildSmsBody(args: { name: string; formType: LeadFormType }): string {
-  const { name, formType } = args;
-
-  switch (formType) {
-    case 'quote':
-      return `Hi ${name}, we’ve received your quote request and will follow up shortly. - NextForge (no reply)`;
-    case 'contact':
-      return `Hi ${name}, thanks for contacting us. We’ve received your message and will get back to you soon. - NextForge (no reply)`;
-    case 'support':
-      return `Hi ${name}, your support request has been received. We’ll reach out with an update soon. - NextForge (no reply)`;
-    case 'billing':
-      return `Hi ${name}, we’ve received your billing inquiry and will review it shortly. - NextForge (no reply)`;
-    default:
-      return `Hi ${name}, we’ve received your request and will be in touch soon. - NextForge (no reply)`;
+    const res = await telnyxClient.messages.create(payload);
+    console.log("[telnyx] SMS sent:", {
+      to,
+      formType,
+      messageId: res?.data?.id ?? res?.data,
+    });
+  } catch (err) {
+    console.error("[telnyx] Failed to send SMS:", err);
   }
 }
