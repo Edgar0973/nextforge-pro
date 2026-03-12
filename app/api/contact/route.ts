@@ -1,4 +1,3 @@
-// app/api/contact/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { LeadRecord } from "@/lib/leadNotifications";
@@ -8,9 +7,9 @@ export const runtime = "nodejs";
 
 type ContactPayload = {
   name?: string;
-  email: string;
+  email?: string;
   phone?: string;
-  message: string;
+  message?: string;
   company?: string;
   sourcePage?: string;
 };
@@ -57,64 +56,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { name, email, phone, message, company, sourcePage } = body;
+  const name = (body.name ?? "").trim();
+  const email = (body.email ?? "").trim();
+  const company = (body.company ?? "").trim();
+  const message = (body.message ?? "").trim();
+  const sourcePage = (body.sourcePage ?? "").trim();
+  const phoneE164 = normalizeUsPhone(body.phone);
 
-  if (!email || !message) {
+  // ALL REQUIRED (no exceptions)
+  if (!name || !email || !company || !message || !sourcePage || !phoneE164) {
     return NextResponse.json(
-      { error: "Email and message are required." },
+      {
+        error:
+          "Missing required fields. Required: name, email, phone (+1XXXXXXXXXX), company, message, sourcePage.",
+      },
       { status: 400 }
     );
   }
 
-  const phoneE164 = normalizeUsPhone(phone);
-
-  const baseInsert = {
+  const insertPayload = {
     type: "contact",
-    name: name ?? null,
+    name,
     email,
+    phone: phoneE164,
+    company,
     message,
-    source_page: sourcePage ?? "/contact",
-    company: company ?? null,
+    source_page: sourcePage,
     user_agent: req.headers.get("user-agent"),
     ip: req.headers.get("x-forwarded-for"),
   };
 
-  let data: any = null;
-  let insertError: any = null;
-
-  const attempt1 = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("leads")
-    .insert({ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) })
+    .insert(insertPayload)
     .select()
     .maybeSingle();
 
-  data = attempt1.data;
-  insertError = attempt1.error;
-
-  if (insertError && phoneE164) {
-    console.warn(
-      `${pfx} Insert with phone failed; retrying without phone:`,
-      insertError
-    );
-    const attempt2 = await supabaseAdmin
-      .from("leads")
-      .insert(baseInsert)
-      .select()
-      .maybeSingle();
-
-    data = attempt2.data;
-    insertError = attempt2.error;
-  }
-
-  if (insertError) {
-    console.error(`${pfx} Supabase insert error:`, insertError);
+  if (error) {
+    console.error(`${pfx} Supabase insert error:`, error);
     return NextResponse.json(
-      { error: "Something went wrong while saving your message. Please try again." },
+      { error: "Failed to save contact request. Please try again." },
       { status: 500 }
     );
   }
 
-  // Fire-and-forget notifications, but PARALLEL inside notifyLead (SMTP cannot block SMS)
   if (data) {
     const lead = data as unknown as LeadRecord;
 

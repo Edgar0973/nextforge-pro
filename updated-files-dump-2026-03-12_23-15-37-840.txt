@@ -1,0 +1,1341 @@
+NextForgePro file dump - 2026-03-12_23-15-37-840
+Project root: C:\Users\user\Desktop\nextforge-pro
+
+================================================================================
+FILE: lib/leadNotifications.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\lib\leadNotifications.ts
+================================================================================
+import "server-only";
+import nodemailer from "nodemailer";
+
+export type LeadType = "contact" | "quote" | "support" | "billing";
+
+export type LeadRecord = {
+  id: string;
+  type: LeadType | string;
+  name: string | null;
+  email: string;
+  company: string | null;
+  project_type?: string | null;
+  budget?: string | null;
+  timeline?: string | null;
+  message: string | null;
+  source_page: string | null;
+  created_at: string | Date;
+  // NOTE: your DB now has phone in several tables, but LeadRecord didn't include it.
+  // We'll keep LeadRecord unchanged to avoid breaking other code.
+};
+
+const CONTACT_NOTIFY_EMAIL =
+  process.env.CONTACT_NOTIFY_EMAIL ?? "contact@nextforgepro.com";
+const QUOTE_NOTIFY_EMAIL =
+  process.env.QUOTE_NOTIFY_EMAIL ?? "quotes@nextforgepro.com";
+const SUPPORT_NOTIFY_EMAIL =
+  process.env.SUPPORT_NOTIFY_EMAIL ?? "support@nextforgepro.com";
+const BILLING_NOTIFY_EMAIL =
+  process.env.BILLING_NOTIFY_EMAIL ?? "billing@nextforgepro.com";
+
+const EMAILS_DISABLED = process.env.DISABLE_LEAD_EMAILS === "1";
+const RECEIPT_EMAILS_DISABLED =
+  process.env.DISABLE_LEAD_RECEIPT_EMAILS === "1";
+
+// SMTP (NextForgePro Namecheap Private Email)
+const SMTP_HOST = process.env.NEXTFORGEPRO_EMAIL_SMTP_HOST || "";
+const SMTP_PORT = process.env.NEXTFORGEPRO_EMAIL_SMTP_PORT
+  ? Number(process.env.NEXTFORGEPRO_EMAIL_SMTP_PORT)
+  : 0;
+const SMTP_USER =
+  process.env.NEXTFORGEPRO_EMAIL_SMTP_USER || "notifications@nextforgepro.com";
+const SMTP_PASS = process.env.NEXTFORGEPRO_EMAIL_SMTP_PASS || "";
+
+// Prevent "hang forever" behavior
+const SMTP_CONNECTION_TIMEOUT_MS = 12_000;
+const SMTP_GREETING_TIMEOUT_MS = 12_000;
+const SMTP_SOCKET_TIMEOUT_MS = 15_000;
+// Hard cap around sendMail itself
+const SMTP_SENDMAIL_HARD_TIMEOUT_MS = 20_000;
+
+const HAS_SMTP_CONFIG = !!SMTP_HOST && !!SMTP_PORT && !!SMTP_USER && !!SMTP_PASS;
+
+// Log config once on module load
+console.log("[leadNotifications] Module loaded with SMTP config:", {
+  EMAILS_DISABLED,
+  RECEIPT_EMAILS_DISABLED,
+  HAS_SMTP_CONFIG,
+  SMTP_HOST: SMTP_HOST ? "(set)" : "(missing)",
+  SMTP_PORT,
+  SMTP_USER,
+  CONTACT_NOTIFY_EMAIL,
+  QUOTE_NOTIFY_EMAIL,
+  SUPPORT_NOTIFY_EMAIL,
+  BILLING_NOTIFY_EMAIL,
+});
+
+let smtpTransporter: nodemailer.Transporter | null = null;
+
+function getSmtpTransporter(): nodemailer.Transporter | null {
+  if (!HAS_SMTP_CONFIG) {
+    console.warn(
+      "[leadNotifications] SMTP variables missing; will log emails instead of sending."
+    );
+    return null;
+  }
+
+  if (!smtpTransporter) {
+    const is465 = SMTP_PORT === 465;
+    const is587 = SMTP_PORT === 587;
+
+    smtpTransporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: is465, // 465 = implicit TLS; 587 = STARTTLS upgrade
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+
+      // These are crucial to avoid silent stalls
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+
+      // For port 587, force STARTTLS upgrade (common for Namecheap Private Email)
+      ...(is587
+        ? {
+            requireTLS: true,
+            tls: {
+              // Keep secure verification. If you get cert errors, fix DNS/provider settings.
+              rejectUnauthorized: true,
+            },
+          }
+        : {}),
+    });
+
+    console.log("[leadNotifications] SMTP transporter created.", {
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: is465,
+      requireTLS: is587 ? true : undefined,
+      timeouts: {
+        connection: SMTP_CONNECTION_TIMEOUT_MS,
+        greeting: SMTP_GREETING_TIMEOUT_MS,
+        socket: SMTP_SOCKET_TIMEOUT_MS,
+        hardSendMail: SMTP_SENDMAIL_HARD_TIMEOUT_MS,
+      },
+    });
+  }
+
+  return smtpTransporter;
+}
+
+function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
+async function sendMail(options: {
+  to: string | string[];
+  subject: string;
+  text?: string;
+  html?: string;
+  replyTo?: string;
+  requestId?: string;
+}) {
+  const transporter = getSmtpTransporter();
+  const fromAddress = SMTP_USER;
+  const reqId = options.requestId ?? "no-reqid";
+  const pfx = `[leadNotifications:${reqId}]`;
+
+  if (!transporter) {
+    console.log(
+      `${pfx} SMTP not configured; logging email instead of sending.`
+    );
+    console.log("From:", fromAddress);
+    console.log("To:", options.to);
+    console.log("Subject:", options.subject);
+    if (options.text) console.log("Text body:\n", options.text);
+    if (options.html) console.log("HTML body:\n", options.html);
+    return;
+  }
+
+  try {
+    console.log(`${pfx} transporter.sendMail START`, {
+      to: options.to,
+      subject: options.subject,
+    });
+
+    const info = await withTimeout(
+      "SMTP sendMail",
+      SMTP_SENDMAIL_HARD_TIMEOUT_MS,
+      transporter.sendMail({
+        from: fromAddress,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html ?? options.text,
+        replyTo: options.replyTo,
+      })
+    );
+
+    console.log(`${pfx} Email sent via SMTP:`, {
+      messageId: (info as any).messageId,
+      accepted: (info as any).accepted,
+      rejected: (info as any).rejected,
+      to: options.to,
+      subject: options.subject,
+    });
+  } catch (err) {
+    console.error(
+      `${pfx} Failed to send email via SMTP; logging fallback:`,
+      err
+    );
+    console.log("From:", fromAddress);
+    console.log("To:", options.to);
+    console.log("Subject:", options.subject);
+    if (options.text) console.log("Text body:\n", options.text);
+    if (options.html) console.log("HTML body:\n", options.html);
+  }
+}
+
+function buildSubject(lead: LeadRecord): string {
+  const who = lead.name || lead.email;
+  const type = (lead.type as LeadType) || "contact";
+
+  switch (type) {
+    case "quote":
+      return `New QUOTE request from ${who}`;
+    case "support":
+      return `New SUPPORT request from ${who}`;
+    case "billing":
+      return `New BILLING request from ${who}`;
+    case "contact":
+    default:
+      return `New CONTACT from ${who}`;
+  }
+}
+
+function formatCreatedAt(lead: LeadRecord): string {
+  let created = "N/A";
+  try {
+    if (lead.created_at) {
+      const date =
+        typeof lead.created_at === "string"
+          ? new Date(lead.created_at)
+          : lead.created_at;
+      if (!Number.isNaN(date.getTime())) {
+        created = date.toISOString();
+      }
+    }
+  } catch {
+    created = "N/A";
+  }
+  return created;
+}
+
+function buildPlainTextBody(lead: LeadRecord): string {
+  const created = formatCreatedAt(lead);
+
+  return [
+    `Type:      ${lead.type}`,
+    `Created:   ${created}`,
+    `From:      ${lead.name || "N/A"} <${lead.email}>`,
+    `Company:   ${lead.company || "N/A"}`,
+    `Source:    ${lead.source_page || "N/A"}`,
+    "",
+    `Project type: ${lead.project_type || "N/A"}`,
+    `Budget:       ${lead.budget || "N/A"}`,
+    `Timeline:     ${lead.timeline || "N/A"}`,
+    "",
+    "Message:",
+    lead.message || "(no message provided)",
+  ].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// INTERNAL NOTIFICATION EMAIL (to you)
+// ---------------------------------------------------------------------------
+
+export async function sendLeadNotification(
+  lead: LeadRecord,
+  opts?: { requestId?: string }
+): Promise<void> {
+  const reqId = opts?.requestId ?? "no-reqid";
+  const pfx = `[leadNotifications:${reqId}]`;
+
+  if (EMAILS_DISABLED) {
+    console.log(
+      `${pfx} Emails disabled via DISABLE_LEAD_EMAILS; skipping internal notification.`,
+      { leadId: lead.id, type: lead.type }
+    );
+    return;
+  }
+
+  const type = ((lead.type as LeadType) || "contact") as LeadType;
+
+  const to =
+    type === "quote"
+      ? QUOTE_NOTIFY_EMAIL
+      : type === "support"
+      ? SUPPORT_NOTIFY_EMAIL
+      : type === "billing"
+      ? BILLING_NOTIFY_EMAIL
+      : CONTACT_NOTIFY_EMAIL;
+
+  console.log(`${pfx} Preparing SMTP notification:`, {
+    leadId: lead.id,
+    type,
+    to,
+    from: SMTP_USER,
+  });
+
+  if (!to) {
+    console.warn(
+      `${pfx} No destination email configured (CONTACT/QUOTE/SUPPORT/BILLING_NOTIFY_EMAIL); logging only.`
+    );
+    console.log(buildPlainTextBody(lead));
+    return;
+  }
+
+  const subject = buildSubject(lead);
+  const text = buildPlainTextBody(lead);
+
+  console.log(`\n${pfx} New lead notification (SMTP)`);
+  console.log("To:", to);
+  console.log("Subject:", subject);
+
+  await sendMail({
+    to,
+    subject,
+    text,
+    replyTo: lead.email || undefined,
+    requestId: reqId,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// CUSTOMER-FACING NO-REPLY RECEIPT EMAIL
+// ---------------------------------------------------------------------------
+
+function buildReceiptSubject(lead: LeadRecord): string {
+  const type = ((lead.type as LeadType) || "contact") as LeadType;
+
+  switch (type) {
+    case "quote":
+      return "We’ve received your quote request";
+    case "support":
+      return "We’ve received your support request";
+    case "billing":
+      return "We’ve received your billing inquiry";
+    case "contact":
+    default:
+      return "We’ve received your message";
+  }
+}
+
+function buildReceiptHtml(lead: LeadRecord): string {
+  const type = ((lead.type as LeadType) || "contact") as LeadType;
+  const name = lead.name || "there";
+
+  const createdIso = formatCreatedAt(lead);
+  const createdDisplay =
+    createdIso !== "N/A"
+      ? new Date(createdIso).toLocaleString("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : null;
+
+  const titleMap: Record<LeadType, string> = {
+    contact: "We’ve received your message",
+    quote: "Your quote request is in our queue",
+    support: "Your support request is logged",
+    billing: "Your billing inquiry is received",
+  };
+
+  const introMap: Record<LeadType, string> = {
+    contact:
+      "Thanks for reaching out. Our team has your message and will respond as soon as possible.",
+    quote:
+      "Thanks for requesting a quote. We’re reviewing the details you provided and will follow up with next steps.",
+    support:
+      "We’ve recorded your support request and will get back to you with an update or resolution.",
+    billing:
+      "We’ve received your billing inquiry and will review the details shortly.",
+  };
+
+  const summaryRows: string[] = [];
+
+  if (lead.project_type) {
+    summaryRows.push(`
+      <tr>
+        <td style="padding: 6px 8px; font-weight: 600; color: #111;">Project type</td>
+        <td style="padding: 6px 8px; color: #444;">
+          ${lead.project_type}
+        </td>
+      </tr>
+    `);
+  }
+
+  if (lead.budget) {
+    summaryRows.push(`
+      <tr>
+        <td style="padding: 6px 8px; font-weight: 600; color: #111;">Budget</td>
+        <td style="padding: 6px 8px; color: #444;">
+          ${lead.budget}
+        </td>
+      </tr>
+    `);
+  }
+
+  if (lead.timeline) {
+    summaryRows.push(`
+      <tr>
+        <td style="padding: 6px 8px; font-weight: 600; color: #111;">Timeline</td>
+        <td style="padding: 6px 8px; color: #444;">
+          ${lead.timeline}
+        </td>
+      </tr>
+    `);
+  }
+
+  if (lead.message) {
+    summaryRows.push(`
+      <tr>
+        <td style="padding: 6px 8px; font-weight: 600; color: #111;">Message</td>
+        <td style="padding: 6px 8px; color: #444; white-space: pre-line;">
+          ${lead.message}
+        </td>
+      </tr>
+    `);
+  }
+
+  const hasSummary = summaryRows.length > 0;
+
+  return `
+    <div style="background-color: #f5f5f7; padding: 24px 16px;">
+      <div style="
+        max-width: 640px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 16px;
+        padding: 24px 20px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      ">
+        <h1 style="font-size: 22px; margin: 0 0 12px 0; color: #111827;">
+          ${titleMap[type]}
+        </h1>
+        <p style="margin: 0 0 12px 0; font-size: 15px; color: #4b5563;">
+          Hi ${name},
+        </p>
+        <p style="margin: 0 0 16px 0; font-size: 15px; color: #4b5563;">
+          ${introMap[type]}
+        </p>
+        ${
+          createdDisplay
+            ? `<p style="margin: 0 0 16px 0; font-size: 13px; color: #6b7280;">
+                 Submitted on <strong>${createdDisplay}</strong>
+               </p>`
+            : ""
+        }
+        ${
+          hasSummary
+            ? `
+          <div style="margin-top: 16px; border-radius: 12px; border: 1px solid #e5e7eb;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tbody>
+                ${summaryRows.join("")}
+              </tbody>
+            </table>
+          </div>`
+            : ""
+        }
+        <p style="margin: 20px 0 0 0; font-size: 13px; color: #9ca3af;">
+          This is an automated no-reply email from Next Forge Pro confirming that your
+          ${type} form was submitted successfully.
+        </p>
+      </div>
+      <p style="margin: 16px auto 0; max-width: 640px; font-size: 11px; color: #9ca3af; text-align: center;">
+        © ${new Date().getFullYear()} Next Forge Pro. All rights reserved.
+      </p>
+    </div>
+  `;
+}
+
+export async function sendLeadReceipt(
+  lead: LeadRecord,
+  opts?: { requestId?: string }
+): Promise<void> {
+  const reqId = opts?.requestId ?? "no-reqid";
+  const pfx = `[leadNotifications:${reqId}]`;
+
+  if (EMAILS_DISABLED) {
+    console.log(
+      `${pfx} Emails disabled via DISABLE_LEAD_EMAILS; skipping customer receipt.`,
+      { leadId: lead.id, type: lead.type }
+    );
+    return;
+  }
+
+  if (RECEIPT_EMAILS_DISABLED) {
+    console.log(
+      `${pfx} Customer receipts disabled via DISABLE_LEAD_RECEIPT_EMAILS; skipping.`,
+      { leadId: lead.id, type: lead.type }
+    );
+    return;
+  }
+
+  if (!lead.email) {
+    console.warn(
+      `${pfx} Lead has no email; cannot send customer receipt.`,
+      { leadId: lead.id, type: lead.type }
+    );
+    return;
+  }
+
+  const subject = buildReceiptSubject(lead);
+  const html = buildReceiptHtml(lead);
+
+  console.log(`\n${pfx} Customer receipt (SMTP)`);
+  console.log("To:", lead.email);
+  console.log("Subject:", subject);
+
+  await sendMail({
+    to: lead.email,
+    subject,
+    html,
+    requestId: reqId,
+  });
+}
+
+================================================================================
+FILE: lib/telnyx.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\lib\telnyx.ts
+================================================================================
+// lib/telnyx.ts
+import "server-only";
+import telnyx from "telnyx";
+
+const apiKey = process.env.TELNYX_API_KEY || "";
+const fromNumber = process.env.TELNYX_FROM_NUMBER || "";
+const messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || "";
+const smsDisabled = process.env.DISABLE_LEAD_SMS === "1";
+
+// Hard cap so SMS can't hang forever either
+const TELNYX_SEND_HARD_TIMEOUT_MS = 12_000;
+
+let client: any = null;
+
+function getClient(): any {
+  if (!apiKey) {
+    console.warn("[telnyx] TELNYX_API_KEY not set; SMS will be logged only.");
+    return null;
+  }
+
+  if (!client) {
+    const telnyxFactory = telnyx as any;
+    client = telnyxFactory(apiKey);
+    console.log("[telnyx] Client initialized.");
+  }
+
+  return client;
+}
+
+function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
+type SmsReceiptParams = {
+  to: string;
+  name: string | null;
+  formType: "contact" | "quote" | "billing" | "support";
+  requestId?: string;
+};
+
+export async function sendLeadSmsReceipt({
+  to,
+  name,
+  formType,
+  requestId,
+}: SmsReceiptParams): Promise<void> {
+  const reqId = requestId ?? "no-reqid";
+  const pfx = `[telnyx:${reqId}]`;
+
+  if (smsDisabled) {
+    console.log(`${pfx} SMS disabled via DISABLE_LEAD_SMS; skipping.`, {
+      to,
+      formType,
+    });
+    return;
+  }
+
+  if (!to) {
+    console.warn(`${pfx} No destination phone number provided; skipping SMS.`);
+    return;
+  }
+
+  const telnyxClient = getClient();
+  const sender = fromNumber;
+
+  const displayName = name || "there";
+
+  const message = (() => {
+    switch (formType) {
+      case "quote":
+        return `Hi ${displayName}, we received your quote request at Next Forge Pro. We'll review it and follow up shortly.`;
+      case "support":
+        return `Hi ${displayName}, we received your support request at Next Forge Pro and will get back to you soon.`;
+      case "billing":
+        return `Hi ${displayName}, we received your billing inquiry at Next Forge Pro. We'll review it and follow up shortly.`;
+      case "contact":
+      default:
+        return `Hi ${displayName}, we received your message at Next Forge Pro. We'll be in touch soon.`;
+    }
+  })();
+
+  console.log(`${pfx} Preparing SMS:`, {
+    from: sender,
+    to,
+    formType,
+    messagingProfileId: messagingProfileId ? "(set)" : "(missing)",
+  });
+
+  if (!telnyxClient || !sender) {
+    console.log(
+      `${pfx} Missing client or fromNumber; logging SMS instead of sending.`,
+      { to, message }
+    );
+    return;
+  }
+
+  const payload = {
+    from: sender,
+    to,
+    text: message,
+    messaging_profile_id: messagingProfileId || undefined,
+  };
+
+  try {
+    console.log(`${pfx} telnyxClient.messages.create START`);
+    const res = await withTimeout(
+      "Telnyx messages.create",
+      TELNYX_SEND_HARD_TIMEOUT_MS,
+      telnyxClient.messages.create(payload)
+    );
+
+    console.log(`${pfx} SMS sent:`, {
+      to,
+      formType,
+      messageId: (res as any)?.data?.id ?? (res as any)?.data,
+    });
+  } catch (err) {
+    console.error(`${pfx} Failed to send SMS:`, err);
+  }
+}
+
+================================================================================
+FILE: lib/supabaseAdmin.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\lib\supabaseAdmin.ts
+================================================================================
+// lib/supabaseAdmin.ts
+import "server-only";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  // Do not throw at import-time (will break builds).
+  // Log a clear error instead; server code can guard or use getSupabaseAdmin().
+  console.error(
+    "[supabaseAdmin] Missing Supabase env vars. " +
+      "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is undefined. " +
+      "Check .env.local for local dev and your hosting Environment Variables (Production)."
+  );
+}
+
+// Either export a real client or null; existing code can check it.
+export const supabaseAdmin: SupabaseClient | null =
+  supabaseUrl && serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+    : null;
+
+/**
+ * Preferred helper for new code.
+ *
+ * Usage:
+ *   const client = getSupabaseAdmin();
+ *   const { data, error } = await client.from("quote_requests").select("*");
+ *
+ * This will throw a clear runtime error if the env vars are missing,
+ * instead of letting you call methods on `null`.
+ */
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!supabaseAdmin) {
+    throw new Error(
+      "[supabaseAdmin] Supabase admin client is not initialized. " +
+        "Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables."
+    );
+  }
+  return supabaseAdmin;
+}
+
+================================================================================
+FILE: lib/notifyLead.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\lib\notifyLead.ts
+================================================================================
+// lib/notifyLead.ts
+import "server-only";
+
+import { sendLeadNotification, sendLeadReceipt, type LeadRecord } from "@/lib/leadNotifications";
+import { sendLeadSmsReceipt } from "@/lib/telnyx";
+
+function requestIdFallback() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
+// Extra safety: if something internally hangs anyway, cap each task.
+function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
+export async function notifyLead(params: {
+  lead: LeadRecord;
+  phoneE164?: string | null;
+  formType: "contact" | "quote" | "billing" | "support";
+  requestId?: string;
+}) {
+  const reqId = params.requestId ?? requestIdFallback();
+  const pfx = `[notifyLead:${reqId}]`;
+
+  const tasks: Promise<unknown>[] = [];
+
+  // Internal email + customer receipt in parallel
+  tasks.push(
+    withTimeout("sendLeadNotification", 25_000, sendLeadNotification(params.lead, { requestId: reqId }))
+  );
+
+  tasks.push(
+    withTimeout("sendLeadReceipt", 25_000, sendLeadReceipt(params.lead, { requestId: reqId }))
+  );
+
+  // SMS in parallel (if phone)
+  if (params.phoneE164) {
+    tasks.push(
+      withTimeout(
+        "sendLeadSmsReceipt",
+        20_000,
+        sendLeadSmsReceipt({
+          to: params.phoneE164,
+          name: params.lead.name,
+          formType: params.formType,
+          requestId: reqId,
+        })
+      )
+    );
+  }
+
+  const results = await Promise.allSettled(tasks);
+
+  const summary = results.map((r) =>
+    r.status === "fulfilled"
+      ? { ok: true }
+      : { ok: false, error: r.reason?.message ?? String(r.reason) }
+  );
+
+  console.log(`${pfx} allSettled summary:`, summary);
+
+  return { requestId: reqId, summary };
+}
+
+================================================================================
+FILE: app/api/contact/route.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\app\api\contact\route.ts
+================================================================================
+// app/api/contact/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { LeadRecord } from "@/lib/leadNotifications";
+import { notifyLead } from "@/lib/notifyLead";
+
+export const runtime = "nodejs";
+
+type ContactPayload = {
+  name?: string;
+  email: string;
+  phone?: string;
+  message: string;
+  company?: string;
+  sourcePage?: string;
+};
+
+function normalizeUsPhone(input?: string): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("+")) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    return /^\+1\d{10}$/.test(cleaned) ? cleaned : null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+function requestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
+export async function POST(req: NextRequest) {
+  const reqId = requestId();
+  const pfx = `[/api/contact:${reqId}]`;
+
+  console.log(`${pfx} handler START`);
+
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      {
+        error:
+          "Server configuration error: Supabase credentials are missing. Please try again later.",
+      },
+      { status: 500 }
+    );
+  }
+
+  let body: ContactPayload;
+  try {
+    body = (await req.json()) as ContactPayload;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const { name, email, phone, message, company, sourcePage } = body;
+
+  if (!email || !message) {
+    return NextResponse.json(
+      { error: "Email and message are required." },
+      { status: 400 }
+    );
+  }
+
+  const phoneE164 = normalizeUsPhone(phone);
+
+  const baseInsert = {
+    type: "contact",
+    name: name ?? null,
+    email,
+    message,
+    source_page: sourcePage ?? "/contact",
+    company: company ?? null,
+    user_agent: req.headers.get("user-agent"),
+    ip: req.headers.get("x-forwarded-for"),
+  };
+
+  let data: any = null;
+  let insertError: any = null;
+
+  const attempt1 = await supabaseAdmin
+    .from("leads")
+    .insert({ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) })
+    .select()
+    .maybeSingle();
+
+  data = attempt1.data;
+  insertError = attempt1.error;
+
+  if (insertError && phoneE164) {
+    console.warn(
+      `${pfx} Insert with phone failed; retrying without phone:`,
+      insertError
+    );
+    const attempt2 = await supabaseAdmin
+      .from("leads")
+      .insert(baseInsert)
+      .select()
+      .maybeSingle();
+
+    data = attempt2.data;
+    insertError = attempt2.error;
+  }
+
+  if (insertError) {
+    console.error(`${pfx} Supabase insert error:`, insertError);
+    return NextResponse.json(
+      { error: "Something went wrong while saving your message. Please try again." },
+      { status: 500 }
+    );
+  }
+
+  // Fire-and-forget notifications, but PARALLEL inside notifyLead (SMTP cannot block SMS)
+  if (data) {
+    const lead = data as unknown as LeadRecord;
+
+    void notifyLead({
+      lead,
+      phoneE164,
+      formType: "contact",
+      requestId: reqId,
+    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
+  }
+
+  return NextResponse.json({ success: true, lead: data ?? null }, { status: 200 });
+}
+
+================================================================================
+FILE: app/api/quotes/route.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\app\api\quotes\route.ts
+================================================================================
+// app/api/quotes/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { LeadRecord } from "@/lib/leadNotifications";
+import { notifyLead } from "@/lib/notifyLead";
+
+export const runtime = "nodejs";
+
+type QuotePayload = {
+  name?: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  projectType?: string;
+  budget?: string;
+  timeline?: string;
+  projectDetails?: string;
+  sourcePage?: string;
+  message?: string;
+  details?: string; // your form uses "details"
+};
+
+function normalizeUsPhone(input?: string): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("+")) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    return /^\+1\d{10}$/.test(cleaned) ? cleaned : null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+function requestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
+export async function POST(req: NextRequest) {
+  const reqId = requestId();
+  const pfx = `[/api/quotes:${reqId}]`;
+
+  if (!supabaseAdmin) {
+    return NextResponse.json(
+      {
+        error:
+          "Server configuration error: Supabase credentials are missing. Please try again later.",
+      },
+      { status: 500 }
+    );
+  }
+
+  let body: QuotePayload;
+  try {
+    body = (await req.json()) as QuotePayload;
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  const email = (body.email ?? "").trim();
+  const phoneE164 = normalizeUsPhone(body.phone);
+
+  const rawDetails = body.projectDetails ?? body.details ?? body.message ?? "";
+  const projectDetails = typeof rawDetails === "string" ? rawDetails.trim() : "";
+
+  if (!email || !projectDetails) {
+    return NextResponse.json(
+      { error: "Email and project details are required." },
+      { status: 400 }
+    );
+  }
+
+  const baseInsert = {
+    type: "quote",
+    name: body.name ?? null,
+    email,
+    company: body.company ?? null,
+    project_type: body.projectType ?? null,
+    budget: body.budget ?? null,
+    timeline: body.timeline ?? null,
+    message: projectDetails,
+    source_page: body.sourcePage ?? "/quote",
+    user_agent: req.headers.get("user-agent"),
+    ip: req.headers.get("x-forwarded-for"),
+  };
+
+  let data: any = null;
+  let insertError: any = null;
+
+  const attempt1 = await supabaseAdmin
+    .from("leads")
+    .insert({ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) })
+    .select()
+    .maybeSingle();
+
+  data = attempt1.data;
+  insertError = attempt1.error;
+
+  if (insertError && phoneE164) {
+    console.warn(
+      `${pfx} Insert with phone failed; retrying without phone:`,
+      insertError
+    );
+    const attempt2 = await supabaseAdmin
+      .from("leads")
+      .insert(baseInsert)
+      .select()
+      .maybeSingle();
+
+    data = attempt2.data;
+    insertError = attempt2.error;
+  }
+
+  if (insertError) {
+    console.error(`${pfx} Supabase insert error:`, insertError);
+    return NextResponse.json(
+      { error: "Something went wrong while saving your quote request. Please try again." },
+      { status: 500 }
+    );
+  }
+
+  if (data) {
+    const lead = data as unknown as LeadRecord;
+
+    void notifyLead({
+      lead,
+      phoneE164,
+      formType: "quote",
+      requestId: reqId,
+    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
+  }
+
+  return NextResponse.json({ success: true, lead: data ?? null }, { status: 200 });
+}
+
+================================================================================
+FILE: app/api/billing/route.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\app\api\billing\route.ts
+================================================================================
+// app/api/billing/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { LeadRecord } from "@/lib/leadNotifications";
+import { notifyLead } from "@/lib/notifyLead";
+
+export const runtime = "nodejs";
+
+function normalizeUsPhone(input?: string): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("+")) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    return /^\+1\d{10}$/.test(cleaned) ? cleaned : null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+function requestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
+export async function POST(req: NextRequest) {
+  const reqId = requestId();
+  const pfx = `[/api/billing:${reqId}]`;
+
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const body = await req.json();
+
+    const {
+      name,
+      email,
+      phone,
+      company,
+      invoiceNumber,
+      message,
+      sourcePage,
+    } = body as {
+      name?: string;
+      email?: string;
+      phone?: string;
+      company?: string;
+      invoiceNumber?: string;
+      message?: string;
+      sourcePage?: string;
+    };
+
+    const phoneE164 = normalizeUsPhone(phone);
+
+    const combinedMessage =
+      invoiceNumber && message
+        ? `Invoice: ${invoiceNumber}\n\n${message}`
+        : invoiceNumber
+        ? `Invoice: ${invoiceNumber}`
+        : message ?? null;
+
+    const baseInsert = {
+      type: "billing" as const,
+      name: name ?? null,
+      email: email ?? null,
+      company: company ?? null,
+      invoice_number: invoiceNumber ?? null,
+      message: combinedMessage,
+      source_page: sourcePage ?? "/billing",
+      status: "open" as const,
+      status_changed_at: new Date().toISOString(),
+      status_changed_by: null,
+      user_agent: req.headers.get("user-agent"),
+      ip: req.headers.get("x-forwarded-for"),
+    };
+
+    let data: any = null;
+    let insertError: any = null;
+
+    const attempt1 = await supabase
+      .from("billing_requests")
+      .insert([{ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) }])
+      .select()
+      .single();
+
+    data = attempt1.data;
+    insertError = attempt1.error;
+
+    if (insertError && phoneE164) {
+      console.warn(
+        `${pfx} Insert with phone failed; retrying without phone:`,
+        insertError
+      );
+      const attempt2 = await supabase
+        .from("billing_requests")
+        .insert([baseInsert])
+        .select()
+        .single();
+
+      data = attempt2.data;
+      insertError = attempt2.error;
+    }
+
+    if (insertError || !data) {
+      console.error(`${pfx} Supabase insert error:`, insertError);
+      return NextResponse.json(
+        { success: false, error: "Failed to submit billing request" },
+        { status: 500 }
+      );
+    }
+
+    const lead: LeadRecord = {
+      id: data.id,
+      type: data.type,
+      name: data.name,
+      email: data.email,
+      company: data.company,
+      project_type: null,
+      budget: null,
+      timeline: null,
+      message: data.message,
+      source_page: data.source_page,
+      created_at: data.created_at ?? new Date().toISOString(),
+    };
+
+    void notifyLead({
+      lead,
+      phoneE164,
+      formType: "billing",
+      requestId: reqId,
+    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error(`${pfx} Unexpected error:`, err);
+    return NextResponse.json(
+      { success: false, error: "Unexpected error" },
+      { status: 500 }
+    );
+  }
+}
+
+================================================================================
+FILE: app/api/support/route.ts
+FULLPATH: C:\Users\user\Desktop\nextforge-pro\app\api\support\route.ts
+================================================================================
+// app/api/support/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { LeadRecord } from "@/lib/leadNotifications";
+import { notifyLead } from "@/lib/notifyLead";
+
+export const runtime = "nodejs";
+
+function normalizeUsPhone(input?: string): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("+")) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    return /^\+1\d{10}$/.test(cleaned) ? cleaned : null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+function requestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
+export async function POST(req: NextRequest) {
+  const reqId = requestId();
+  const pfx = `[/api/support:${reqId}]`;
+
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const body = await req.json();
+
+    const { name, email, phone, company, subject, message, sourcePage } =
+      body as {
+        name?: string;
+        email?: string;
+        phone?: string;
+        company?: string;
+        subject?: string;
+        message?: string;
+        sourcePage?: string;
+      };
+
+    const phoneE164 = normalizeUsPhone(phone);
+
+    const baseInsert = {
+      type: "support" as const,
+      name: name ?? null,
+      email: email ?? null,
+      company: company ?? null,
+      subject: subject ?? null,
+      message: message ?? null,
+      source_page: sourcePage ?? "/support",
+      status: "open" as const,
+      status_changed_at: new Date().toISOString(),
+      status_changed_by: null,
+      user_agent: req.headers.get("user-agent"),
+      ip: req.headers.get("x-forwarded-for"),
+    };
+
+    let data: any = null;
+    let insertError: any = null;
+
+    const attempt1 = await supabase
+      .from("support_requests")
+      .insert([{ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) }])
+      .select()
+      .single();
+
+    data = attempt1.data;
+    insertError = attempt1.error;
+
+    if (insertError && phoneE164) {
+      console.warn(
+        `${pfx} Insert with phone failed; retrying without phone:`,
+        insertError
+      );
+      const attempt2 = await supabase
+        .from("support_requests")
+        .insert([baseInsert])
+        .select()
+        .single();
+
+      data = attempt2.data;
+      insertError = attempt2.error;
+    }
+
+    if (insertError || !data) {
+      console.error(`${pfx} Supabase insert error:`, insertError);
+      return NextResponse.json(
+        { success: false, error: "Failed to submit support request" },
+        { status: 500 }
+      );
+    }
+
+    const lead: LeadRecord = {
+      id: data.id,
+      type: data.type,
+      name: data.name,
+      email: data.email,
+      company: data.company,
+      project_type: null,
+      budget: null,
+      timeline: null,
+      message: data.message,
+      source_page: data.source_page,
+      created_at: data.created_at ?? new Date().toISOString(),
+    };
+
+    void notifyLead({
+      lead,
+      phoneE164,
+      formType: "support",
+      requestId: reqId,
+    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error(`${pfx} Unexpected error:`, err);
+    return NextResponse.json(
+      { success: false, error: "Unexpected error" },
+      { status: 500 }
+    );
+  }
+}
+

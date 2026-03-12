@@ -1,4 +1,3 @@
-// app/api/quotes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { LeadRecord } from "@/lib/leadNotifications";
@@ -8,7 +7,7 @@ export const runtime = "nodejs";
 
 type QuotePayload = {
   name?: string;
-  email: string;
+  email?: string;
   phone?: string;
   company?: string;
   projectType?: string;
@@ -60,64 +59,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
+  const name = (body.name ?? "").trim();
   const email = (body.email ?? "").trim();
-  const phoneE164 = normalizeUsPhone(body.phone);
+  const company = (body.company ?? "").trim();
+  const projectType = (body.projectType ?? "").trim();
+  const budget = (body.budget ?? "").trim();
+  const timeline = (body.timeline ?? "").trim();
+  const sourcePage = (body.sourcePage ?? "").trim();
 
   const rawDetails = body.projectDetails ?? body.details ?? body.message ?? "";
   const projectDetails = typeof rawDetails === "string" ? rawDetails.trim() : "";
 
-  if (!email || !projectDetails) {
+  const phoneE164 = normalizeUsPhone(body.phone);
+
+  // ALL REQUIRED (no exceptions)
+  if (
+    !name ||
+    !email ||
+    !company ||
+    !projectType ||
+    !budget ||
+    !timeline ||
+    !projectDetails ||
+    !sourcePage ||
+    !phoneE164
+  ) {
     return NextResponse.json(
-      { error: "Email and project details are required." },
+      {
+        error:
+          "Missing required fields. Required: name, email, phone (+1XXXXXXXXXX), company, projectType, budget, timeline, projectDetails, sourcePage.",
+      },
       { status: 400 }
     );
   }
 
-  const baseInsert = {
+  const insertPayload = {
     type: "quote",
-    name: body.name ?? null,
+    name,
     email,
-    company: body.company ?? null,
-    project_type: body.projectType ?? null,
-    budget: body.budget ?? null,
-    timeline: body.timeline ?? null,
+    phone: phoneE164,
+    company,
+    project_type: projectType,
+    budget,
+    timeline,
     message: projectDetails,
-    source_page: body.sourcePage ?? "/quote",
+    source_page: sourcePage,
     user_agent: req.headers.get("user-agent"),
     ip: req.headers.get("x-forwarded-for"),
   };
 
-  let data: any = null;
-  let insertError: any = null;
-
-  const attempt1 = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("leads")
-    .insert({ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) })
+    .insert(insertPayload)
     .select()
     .maybeSingle();
 
-  data = attempt1.data;
-  insertError = attempt1.error;
-
-  if (insertError && phoneE164) {
-    console.warn(
-      `${pfx} Insert with phone failed; retrying without phone:`,
-      insertError
-    );
-    const attempt2 = await supabaseAdmin
-      .from("leads")
-      .insert(baseInsert)
-      .select()
-      .maybeSingle();
-
-    data = attempt2.data;
-    insertError = attempt2.error;
-  }
-
-  if (insertError) {
-    console.error(`${pfx} Supabase insert error:`, insertError);
+  if (error) {
+    console.error(`${pfx} Supabase insert error:`, error);
     return NextResponse.json(
-      { error: "Something went wrong while saving your quote request. Please try again." },
+      { error: "Failed to save quote request. Please try again." },
       { status: 500 }
     );
   }
