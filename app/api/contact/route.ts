@@ -13,17 +13,31 @@ export const runtime = "nodejs";
 type ContactPayload = {
   name?: string;
   email: string;
+  phone?: string;
   message: string;
   company?: string;
   sourcePage?: string;
 };
 
+function normalizeUsPhone(input?: string): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("+")) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    return /^\+1\d{10}$/.test(cleaned) ? cleaned : null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   console.log("[/api/contact] handler START");
 
-  // Ensure Supabase admin client exists
   if (!supabaseAdmin) {
-    console.error("[/api/contact] supabaseAdmin is not configured.");
     return NextResponse.json(
       {
         error:
@@ -34,129 +48,101 @@ export async function POST(req: NextRequest) {
   }
 
   let body: ContactPayload;
-
   try {
     body = (await req.json()) as ContactPayload;
-    console.log("[/api/contact] parsed request body:", body);
-  } catch (err) {
-    console.error("[/api/contact] Failed to parse JSON body:", err);
-    return NextResponse.json(
-      { error: "Invalid request body." },
-      { status: 400 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { name, email, message, company, sourcePage } = body;
+  const { name, email, phone, message, company, sourcePage } = body;
 
   if (!email || !message) {
-    console.warn("[/api/contact] Missing required fields:", { email, message });
     return NextResponse.json(
       { error: "Email and message are required." },
       { status: 400 }
     );
   }
 
-  try {
-    const { data, error } = await supabaseAdmin
+  const phoneE164 = normalizeUsPhone(phone);
+
+  const baseInsert = {
+    type: "contact",
+    name: name ?? null,
+    email,
+    message,
+    source_page: sourcePage ?? "/contact",
+    company: company ?? null,
+    user_agent: req.headers.get("user-agent"),
+    ip: req.headers.get("x-forwarded-for"),
+  };
+
+  // Try insert with phone; if DB doesn't have column yet, retry without phone.
+  let data: any = null;
+  let insertError: any = null;
+
+  const attempt1 = await supabaseAdmin
+    .from("leads")
+    .insert({ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) })
+    .select()
+    .maybeSingle();
+
+  data = attempt1.data;
+  insertError = attempt1.error;
+
+  if (insertError && phoneE164) {
+    console.warn(
+      "[/api/contact] Insert with phone failed; retrying without phone:",
+      insertError
+    );
+    const attempt2 = await supabaseAdmin
       .from("leads")
-      .insert({
-        type: "contact",
-        name: name ?? null,
-        email,
-        message,
-        source_page: sourcePage ?? "/contact",
-        company: company ?? null,
-        // user_agent, ip can be added later
-      })
+      .insert(baseInsert)
       .select()
       .maybeSingle();
 
-    if (error) {
-      console.error("[/api/contact] Supabase insert error:", error);
-      return NextResponse.json(
-        {
-          error:
-            "Something went wrong while saving your message. Please try again.",
-        },
-        { status: 500 }
-      );
-    }
+    data = attempt2.data;
+    insertError = attempt2.error;
+  }
 
-    console.log("[/api/contact] Supabase insert success:", {
-      leadId: data?.id,
-      email: data?.email,
-    });
+  if (insertError) {
+    console.error("[/api/contact] Supabase insert error:", insertError);
+    return NextResponse.json(
+      { error: "Something went wrong while saving your message. Please try again." },
+      { status: 500 }
+    );
+  }
 
-    // Best-effort notifications – do not fail the request if these throw
-    if (data) {
-      const lead = data as unknown as LeadRecord;
-      const phone = (data as any)?.phone as string | undefined;
+  // Notifications (never block success)
+  if (data) {
+    const lead = data as unknown as LeadRecord;
 
-      console.log("[/api/contact] About to call sendLeadNotification with:", {
-        leadId: lead.id,
-        type: lead.type,
-        email: lead.email,
-        DISABLE_LEAD_EMAILS: process.env.DISABLE_LEAD_EMAILS,
-        HAS_RESEND_API_KEY: !!process.env.RESEND_API_KEY,
-        RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
-        CONTACT_NOTIFY_EMAIL: process.env.CONTACT_NOTIFY_EMAIL,
-      });
-
+    void (async () => {
       try {
         await sendLeadNotification(lead);
-        console.log("[/api/contact] sendLeadNotification completed for:", {
-          leadId: lead.id,
-        });
-      } catch (notifyErr) {
-        console.error(
-          "[/api/contact] Failed to send lead notification:",
-          notifyErr
-        );
+      } catch (e) {
+        console.error("[/api/contact] sendLeadNotification error:", e);
       }
 
       try {
         await sendLeadReceipt(lead);
-        console.log("[/api/contact] sendLeadReceipt completed for:", {
-          leadId: lead.id,
-        });
-      } catch (receiptErr) {
-        console.error(
-          "[/api/contact] Failed to send customer receipt:",
-          receiptErr
-        );
+      } catch (e) {
+        console.error("[/api/contact] sendLeadReceipt error:", e);
       }
 
-      if (phone) {
+      // Send SMS even if phone wasn't saved yet (DB column missing)
+      if (phoneE164) {
         try {
           await sendLeadSmsReceipt({
-            to: phone,
+            to: phoneE164,
             name: lead.name,
             formType: "contact",
           });
-          console.log("[/api/contact] sendLeadSmsReceipt completed for:", {
-            leadId: lead.id,
-          });
-        } catch (smsErr) {
-          console.error(
-            "[/api/contact] Failed to send SMS receipt:",
-            smsErr
-          );
+        } catch (e) {
+          console.error("[/api/contact] sendLeadSmsReceipt error:", e);
         }
       }
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        lead: data ?? null,
-      },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("[/api/contact] Unexpected error:", err);
-    return NextResponse.json(
-      { error: "Unexpected error while submitting your message." },
-      { status: 500 }
-    );
+    })();
   }
+
+  return NextResponse.json({ success: true, lead: data ?? null }, { status: 200 });
 }

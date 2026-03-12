@@ -12,7 +12,6 @@ export default function ContactForm() {
   function handleFieldChange(
     _e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) {
-    // If the user starts editing after an error/success, go back to idle
     if (status === "error" || status === "success") {
       setStatus("idle");
       setError(null);
@@ -29,10 +28,11 @@ export default function ContactForm() {
 
     const name = String(formData.get("name") || "").trim();
     const email = String(formData.get("email") || "").trim();
+    const phone = String(formData.get("phone") || "").trim();
     const message = String(formData.get("message") || "").trim();
     const company = String(formData.get("company") || "").trim() || undefined;
 
-    // Basic client-side validation
+    // Basic client-side validation (keep minimal to avoid "false failures")
     if (!email || !message) {
       setStatus("error");
       setError("Please provide at least your email and a short message.");
@@ -46,6 +46,7 @@ export default function ContactForm() {
         body: JSON.stringify({
           name,
           email,
+          phone: phone || undefined, // optional
           message,
           company,
           sourcePage: "/contact",
@@ -56,7 +57,6 @@ export default function ContactForm() {
       try {
         json = await res.json();
       } catch {
-        // In case response body isn't JSON
         json = null;
       }
 
@@ -69,7 +69,6 @@ export default function ContactForm() {
         return;
       }
 
-      // Success
       setStatus("success");
       form.reset();
     } catch (err) {
@@ -126,6 +125,27 @@ export default function ContactForm() {
 
       <div className="space-y-2">
         <label
+          htmlFor="phone"
+          className="text-xs font-medium uppercase tracking-[0.16em] text-slate-300"
+        >
+          Phone (for SMS confirmation)
+        </label>
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          onChange={handleFieldChange}
+          placeholder="(973) 555-1234"
+          className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+        />
+        <p className="text-xs text-slate-400">
+          Optional — if provided, you’ll receive an SMS confirmation.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label
           htmlFor="company"
           className="text-xs font-medium uppercase tracking-[0.16em] text-slate-300"
         >
@@ -158,7 +178,6 @@ export default function ContactForm() {
         />
       </div>
 
-      {/* Status message */}
       <div aria-live="polite" className="min-h-[1.25rem]">
         {status === "success" && (
           <p className="text-sm text-emerald-400">

@@ -1,4 +1,4 @@
-// app/api/quote/route.ts (rename/comment as appropriate)
+// app/api/quotes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
@@ -13,20 +13,34 @@ export const runtime = "nodejs";
 type QuotePayload = {
   name?: string;
   email: string;
+  phone?: string;
   company?: string;
   projectType?: string;
   budget?: string;
   timeline?: string;
-  projectDetails?: string; // optional – we'll normalize below
+  projectDetails?: string;
   sourcePage?: string;
-  // allow for legacy/message-style payloads
   message?: string;
-  details?: string; // 🔑 support the current form's `name="details"`
+  details?: string; // your form uses "details"
 };
+
+function normalizeUsPhone(input?: string): string | null {
+  const raw = (input ?? "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("+")) {
+    const cleaned = raw.replace(/[^\d+]/g, "");
+    return /^\+1\d{10}$/.test(cleaned) ? cleaned : null;
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
 
 export async function POST(req: NextRequest) {
   if (!supabaseAdmin) {
-    console.error("[/api/quote] supabaseAdmin is not configured.");
     return NextResponse.json(
       {
         error:
@@ -37,35 +51,17 @@ export async function POST(req: NextRequest) {
   }
 
   let body: QuotePayload;
-
   try {
     body = (await req.json()) as QuotePayload;
   } catch {
-    return NextResponse.json(
-      { error: "Invalid request body." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const {
-    name,
-    email: rawEmail,
-    company,
-    projectType,
-    budget,
-    timeline,
-    sourcePage,
-  } = body;
+  const email = (body.email ?? "").trim();
+  const phoneE164 = normalizeUsPhone(body.phone);
 
-  // Normalize email
-  const email = (rawEmail ?? "").trim();
-
-  // 🔑 Accept `projectDetails`, `details`, or `message` from the client
-  const rawProjectDetails =
-    body.projectDetails ?? body.details ?? body.message ?? "";
-
-  const projectDetails =
-    typeof rawProjectDetails === "string" ? rawProjectDetails.trim() : "";
+  const rawDetails = body.projectDetails ?? body.details ?? body.message ?? "";
+  const projectDetails = typeof rawDetails === "string" ? rawDetails.trim() : "";
 
   if (!email || !projectDetails) {
     return NextResponse.json(
@@ -74,85 +70,84 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    const { data, error } = await supabaseAdmin
+  const baseInsert = {
+    type: "quote",
+    name: body.name ?? null,
+    email,
+    company: body.company ?? null,
+    project_type: body.projectType ?? null,
+    budget: body.budget ?? null,
+    timeline: body.timeline ?? null,
+    message: projectDetails,
+    source_page: body.sourcePage ?? "/quote",
+    user_agent: req.headers.get("user-agent"),
+    ip: req.headers.get("x-forwarded-for"),
+  };
+
+  let data: any = null;
+  let insertError: any = null;
+
+  const attempt1 = await supabaseAdmin
+    .from("leads")
+    .insert({ ...baseInsert, ...(phoneE164 ? { phone: phoneE164 } : {}) })
+    .select()
+    .maybeSingle();
+
+  data = attempt1.data;
+  insertError = attempt1.error;
+
+  if (insertError && phoneE164) {
+    console.warn(
+      "[/api/quotes] Insert with phone failed; retrying without phone:",
+      insertError
+    );
+    const attempt2 = await supabaseAdmin
       .from("leads")
-      .insert({
-        type: "quote",
-        name: name ?? null,
-        email,
-        company: company ?? null,
-        project_type: projectType ?? null,
-        budget: budget ?? null,
-        timeline: timeline ?? null,
-        message: projectDetails, // always the normalized value
-        source_page: sourcePage ?? "/quote",
-      })
+      .insert(baseInsert)
       .select()
       .maybeSingle();
 
-    if (error) {
-      console.error("[/api/quote] Supabase insert error:", error);
-      return NextResponse.json(
-        {
-          error:
-            "Something went wrong while saving your quote request. Please try again.",
-        },
-        { status: 500 }
-      );
-    }
+    data = attempt2.data;
+    insertError = attempt2.error;
+  }
 
-    // Best-effort notifications – do not fail the request if these throw
-    if (data) {
-      const lead = data as unknown as LeadRecord;
-      const phone = (data as any)?.phone as string | undefined;
+  if (insertError) {
+    console.error("[/api/quotes] Supabase insert error:", insertError);
+    return NextResponse.json(
+      { error: "Something went wrong while saving your quote request. Please try again." },
+      { status: 500 }
+    );
+  }
 
+  if (data) {
+    const lead = data as unknown as LeadRecord;
+
+    void (async () => {
       try {
         await sendLeadNotification(lead);
-      } catch (notifyErr) {
-        console.error(
-          "[/api/quote] Failed to send lead notification:",
-          notifyErr
-        );
+      } catch (e) {
+        console.error("[/api/quotes] sendLeadNotification error:", e);
       }
 
       try {
         await sendLeadReceipt(lead);
-      } catch (receiptErr) {
-        console.error(
-          "[/api/quote] Failed to send customer receipt:",
-          receiptErr
-        );
+      } catch (e) {
+        console.error("[/api/quotes] sendLeadReceipt error:", e);
       }
 
-      if (phone) {
+      if (phoneE164) {
         try {
           await sendLeadSmsReceipt({
-            to: phone,
+            to: phoneE164,
             name: lead.name,
             formType: "quote",
           });
-        } catch (smsErr) {
-          console.error(
-            "[/api/quote] Failed to send SMS receipt:",
-            smsErr
-          );
+        } catch (e) {
+          console.error("[/api/quotes] sendLeadSmsReceipt error:", e);
         }
       }
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        lead: data ?? null,
-      },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("[/api/quote] Unexpected error:", err);
-    return NextResponse.json(
-      { error: "Unexpected error while submitting your quote request." },
-      { status: 500 }
-    );
+    })();
   }
+
+  return NextResponse.json({ success: true, lead: data ?? null }, { status: 200 });
 }

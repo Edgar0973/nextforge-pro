@@ -1,3 +1,4 @@
+// app/quote/QuoteForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -18,12 +19,12 @@ export default function QuoteForm() {
 
     const name = String(formData.get("name") || "").trim() || undefined;
     const email = String(formData.get("email") || "").trim();
+    const phone = String(formData.get("phone") || "").trim() || undefined;
     const company = String(formData.get("company") || "").trim() || undefined;
     const projectType =
       String(formData.get("projectType") || "").trim() || undefined;
     const budget = String(formData.get("budget") || "").trim() || undefined;
-    const timeline =
-      String(formData.get("timeline") || "").trim() || undefined;
+    const timeline = String(formData.get("timeline") || "").trim() || undefined;
     const details = String(formData.get("details") || "").trim();
 
     if (!email || !details) {
@@ -39,6 +40,7 @@ export default function QuoteForm() {
         body: JSON.stringify({
           name,
           email,
+          phone,
           company,
           projectType,
           budget,
@@ -48,7 +50,7 @@ export default function QuoteForm() {
         }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
       if (!res.ok) {
         setStatus("error");
@@ -103,6 +105,26 @@ export default function QuoteForm() {
             className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label
+          htmlFor="phone"
+          className="text-xs font-medium uppercase tracking-[0.16em] text-slate-300"
+        >
+          Phone (for SMS confirmation)
+        </label>
+        <input
+          id="phone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          placeholder="(973) 555-1234"
+          className="w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+        />
+        <p className="text-xs text-slate-400">
+          Optional — if provided, you’ll receive an SMS confirmation.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -212,8 +234,7 @@ export default function QuoteForm() {
 
       {status === "success" && (
         <p className="text-sm text-emerald-400">
-          Thanks for the details — I&apos;ll review and follow up with a tailored
-          quote.
+          Thanks for the details — I&apos;ll review and follow up with a tailored quote.
         </p>
       )}
 

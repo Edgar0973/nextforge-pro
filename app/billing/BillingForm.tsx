@@ -6,6 +6,7 @@ import { useState } from "react";
 export default function BillingForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [message, setMessage] = useState("");
@@ -27,6 +28,7 @@ export default function BillingForm() {
         body: JSON.stringify({
           name,
           email,
+          phone: phone.trim() || undefined,
           company,
           invoiceNumber,
           message,
@@ -43,6 +45,7 @@ export default function BillingForm() {
       setSuccess(true);
       setName("");
       setEmail("");
+      setPhone("");
       setCompany("");
       setInvoiceNumber("");
       setMessage("");
@@ -91,6 +94,23 @@ export default function BillingForm() {
             autoComplete="email"
           />
         </div>
+      </div>
+
+      <div className="flex flex-col">
+        <label className="text-xs font-medium text-slate-200">
+          Phone (for SMS confirmation)
+        </label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="mt-1 rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50"
+          autoComplete="tel"
+          placeholder="(973) 555-1234"
+        />
+        <span className="mt-1 text-xs text-slate-400">
+          Optional — if provided, you’ll receive an SMS confirmation.
+        </span>
       </div>
 
       <div className="flex flex-col">
