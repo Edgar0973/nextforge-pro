@@ -1,12 +1,8 @@
 // app/api/contact/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import {
-  sendLeadNotification,
-  sendLeadReceipt,
-  LeadRecord,
-} from "@/lib/leadNotifications";
-import { sendLeadSmsReceipt } from "@/lib/telnyx";
+import { LeadRecord } from "@/lib/leadNotifications";
+import { notifyLead } from "@/lib/notifyLead";
 
 export const runtime = "nodejs";
 
@@ -34,8 +30,15 @@ function normalizeUsPhone(input?: string): string | null {
   return null;
 }
 
+function requestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
 export async function POST(req: NextRequest) {
-  console.log("[/api/contact] handler START");
+  const reqId = requestId();
+  const pfx = `[/api/contact:${reqId}]`;
+
+  console.log(`${pfx} handler START`);
 
   if (!supabaseAdmin) {
     return NextResponse.json(
@@ -76,7 +79,6 @@ export async function POST(req: NextRequest) {
     ip: req.headers.get("x-forwarded-for"),
   };
 
-  // Try insert with phone; if DB doesn't have column yet, retry without phone.
   let data: any = null;
   let insertError: any = null;
 
@@ -91,7 +93,7 @@ export async function POST(req: NextRequest) {
 
   if (insertError && phoneE164) {
     console.warn(
-      "[/api/contact] Insert with phone failed; retrying without phone:",
+      `${pfx} Insert with phone failed; retrying without phone:`,
       insertError
     );
     const attempt2 = await supabaseAdmin
@@ -105,43 +107,23 @@ export async function POST(req: NextRequest) {
   }
 
   if (insertError) {
-    console.error("[/api/contact] Supabase insert error:", insertError);
+    console.error(`${pfx} Supabase insert error:`, insertError);
     return NextResponse.json(
       { error: "Something went wrong while saving your message. Please try again." },
       { status: 500 }
     );
   }
 
-  // Notifications (never block success)
+  // Fire-and-forget notifications, but PARALLEL inside notifyLead (SMTP cannot block SMS)
   if (data) {
     const lead = data as unknown as LeadRecord;
 
-    void (async () => {
-      try {
-        await sendLeadNotification(lead);
-      } catch (e) {
-        console.error("[/api/contact] sendLeadNotification error:", e);
-      }
-
-      try {
-        await sendLeadReceipt(lead);
-      } catch (e) {
-        console.error("[/api/contact] sendLeadReceipt error:", e);
-      }
-
-      // Send SMS even if phone wasn't saved yet (DB column missing)
-      if (phoneE164) {
-        try {
-          await sendLeadSmsReceipt({
-            to: phoneE164,
-            name: lead.name,
-            formType: "contact",
-          });
-        } catch (e) {
-          console.error("[/api/contact] sendLeadSmsReceipt error:", e);
-        }
-      }
-    })();
+    void notifyLead({
+      lead,
+      phoneE164,
+      formType: "contact",
+      requestId: reqId,
+    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
   }
 
   return NextResponse.json({ success: true, lead: data ?? null }, { status: 200 });

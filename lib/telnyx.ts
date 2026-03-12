@@ -7,6 +7,9 @@ const fromNumber = process.env.TELNYX_FROM_NUMBER || "";
 const messagingProfileId = process.env.TELNYX_MESSAGING_PROFILE_ID || "";
 const smsDisabled = process.env.DISABLE_LEAD_SMS === "1";
 
+// Hard cap so SMS can't hang forever either
+const TELNYX_SEND_HARD_TIMEOUT_MS = 12_000;
+
 let client: any = null;
 
 function getClient(): any {
@@ -16,7 +19,6 @@ function getClient(): any {
   }
 
   if (!client) {
-    // Cast to any so we can call it without TS complaining
     const telnyxFactory = telnyx as any;
     client = telnyxFactory(apiKey);
     console.log("[telnyx] Client initialized.");
@@ -25,19 +27,38 @@ function getClient(): any {
   return client;
 }
 
+function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
+}
+
 type SmsReceiptParams = {
   to: string;
   name: string | null;
   formType: "contact" | "quote" | "billing" | "support";
+  requestId?: string;
 };
 
 export async function sendLeadSmsReceipt({
   to,
   name,
   formType,
+  requestId,
 }: SmsReceiptParams): Promise<void> {
+  const reqId = requestId ?? "no-reqid";
+  const pfx = `[telnyx:${reqId}]`;
+
   if (smsDisabled) {
-    console.log("[telnyx] SMS disabled via DISABLE_LEAD_SMS; skipping.", {
+    console.log(`${pfx} SMS disabled via DISABLE_LEAD_SMS; skipping.`, {
       to,
       formType,
     });
@@ -45,7 +66,7 @@ export async function sendLeadSmsReceipt({
   }
 
   if (!to) {
-    console.warn("[telnyx] No destination phone number provided; skipping SMS.");
+    console.warn(`${pfx} No destination phone number provided; skipping SMS.`);
     return;
   }
 
@@ -68,16 +89,16 @@ export async function sendLeadSmsReceipt({
     }
   })();
 
-  console.log("[telnyx] Preparing SMS:", {
+  console.log(`${pfx} Preparing SMS:`, {
     from: sender,
     to,
     formType,
-    messagingProfileId,
+    messagingProfileId: messagingProfileId ? "(set)" : "(missing)",
   });
 
   if (!telnyxClient || !sender) {
     console.log(
-      "[telnyx] Missing client or fromNumber; logging SMS instead of sending.",
+      `${pfx} Missing client or fromNumber; logging SMS instead of sending.`,
       { to, message }
     );
     return;
@@ -87,18 +108,23 @@ export async function sendLeadSmsReceipt({
     from: sender,
     to,
     text: message,
-    // messaging_profile_id is optional but recommended
     messaging_profile_id: messagingProfileId || undefined,
   };
 
   try {
-    const res = await telnyxClient.messages.create(payload);
-    console.log("[telnyx] SMS sent:", {
+    console.log(`${pfx} telnyxClient.messages.create START`);
+    const res = await withTimeout(
+      "Telnyx messages.create",
+      TELNYX_SEND_HARD_TIMEOUT_MS,
+      telnyxClient.messages.create(payload)
+    );
+
+    console.log(`${pfx} SMS sent:`, {
       to,
       formType,
-      messageId: res?.data?.id ?? res?.data,
+      messageId: (res as any)?.data?.id ?? (res as any)?.data,
     });
   } catch (err) {
-    console.error("[telnyx] Failed to send SMS:", err);
+    console.error(`${pfx} Failed to send SMS:`, err);
   }
 }

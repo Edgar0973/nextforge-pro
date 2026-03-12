@@ -15,6 +15,8 @@ export type LeadRecord = {
   message: string | null;
   source_page: string | null;
   created_at: string | Date;
+  // NOTE: your DB now has phone in several tables, but LeadRecord didn't include it.
+  // We'll keep LeadRecord unchanged to avoid breaking other code.
 };
 
 const CONTACT_NOTIFY_EMAIL =
@@ -39,11 +41,22 @@ const SMTP_USER =
   process.env.NEXTFORGEPRO_EMAIL_SMTP_USER || "notifications@nextforgepro.com";
 const SMTP_PASS = process.env.NEXTFORGEPRO_EMAIL_SMTP_PASS || "";
 
+// Prevent "hang forever" behavior
+const SMTP_CONNECTION_TIMEOUT_MS = 12_000;
+const SMTP_GREETING_TIMEOUT_MS = 12_000;
+const SMTP_SOCKET_TIMEOUT_MS = 15_000;
+// Hard cap around sendMail itself
+const SMTP_SENDMAIL_HARD_TIMEOUT_MS = 20_000;
+
+const HAS_SMTP_CONFIG = !!SMTP_HOST && !!SMTP_PORT && !!SMTP_USER && !!SMTP_PASS;
+
 // Log config once on module load
 console.log("[leadNotifications] Module loaded with SMTP config:", {
   EMAILS_DISABLED,
   RECEIPT_EMAILS_DISABLED,
-  HAS_SMTP_CONFIG: !!SMTP_HOST && !!SMTP_PORT && !!SMTP_USER && !!SMTP_PASS,
+  HAS_SMTP_CONFIG,
+  SMTP_HOST: SMTP_HOST ? "(set)" : "(missing)",
+  SMTP_PORT,
   SMTP_USER,
   CONTACT_NOTIFY_EMAIL,
   QUOTE_NOTIFY_EMAIL,
@@ -54,7 +67,7 @@ console.log("[leadNotifications] Module loaded with SMTP config:", {
 let smtpTransporter: nodemailer.Transporter | null = null;
 
 function getSmtpTransporter(): nodemailer.Transporter | null {
-  if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+  if (!HAS_SMTP_CONFIG) {
     console.warn(
       "[leadNotifications] SMTP variables missing; will log emails instead of sending."
     );
@@ -62,20 +75,64 @@ function getSmtpTransporter(): nodemailer.Transporter | null {
   }
 
   if (!smtpTransporter) {
+    const is465 = SMTP_PORT === 465;
+    const is587 = SMTP_PORT === 587;
+
     smtpTransporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
-      secure: SMTP_PORT === 465, // 465 = SSL, 587 = STARTTLS (not secure here)
+      secure: is465, // 465 = implicit TLS; 587 = STARTTLS upgrade
       auth: {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
+
+      // These are crucial to avoid silent stalls
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
+
+      // For port 587, force STARTTLS upgrade (common for Namecheap Private Email)
+      ...(is587
+        ? {
+            requireTLS: true,
+            tls: {
+              // Keep secure verification. If you get cert errors, fix DNS/provider settings.
+              rejectUnauthorized: true,
+            },
+          }
+        : {}),
     });
 
-    console.log("[leadNotifications] SMTP transporter created.");
+    console.log("[leadNotifications] SMTP transporter created.", {
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: is465,
+      requireTLS: is587 ? true : undefined,
+      timeouts: {
+        connection: SMTP_CONNECTION_TIMEOUT_MS,
+        greeting: SMTP_GREETING_TIMEOUT_MS,
+        socket: SMTP_SOCKET_TIMEOUT_MS,
+        hardSendMail: SMTP_SENDMAIL_HARD_TIMEOUT_MS,
+      },
+    });
   }
 
   return smtpTransporter;
+}
+
+function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeout = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeout) clearTimeout(timeout);
+  });
 }
 
 async function sendMail(options: {
@@ -84,56 +141,61 @@ async function sendMail(options: {
   text?: string;
   html?: string;
   replyTo?: string;
+  requestId?: string;
 }) {
   const transporter = getSmtpTransporter();
-
   const fromAddress = SMTP_USER;
+  const reqId = options.requestId ?? "no-reqid";
+  const pfx = `[leadNotifications:${reqId}]`;
 
   if (!transporter) {
     console.log(
-      "[leadNotifications] SMTP not configured; logging email instead of sending."
+      `${pfx} SMTP not configured; logging email instead of sending.`
     );
     console.log("From:", fromAddress);
     console.log("To:", options.to);
     console.log("Subject:", options.subject);
-    if (options.text) {
-      console.log("Text body:\n", options.text);
-    }
-    if (options.html) {
-      console.log("HTML body:\n", options.html);
-    }
+    if (options.text) console.log("Text body:\n", options.text);
+    if (options.html) console.log("HTML body:\n", options.html);
     return;
   }
 
   try {
-    const info = await transporter.sendMail({
-      from: fromAddress,
+    console.log(`${pfx} transporter.sendMail START`, {
       to: options.to,
       subject: options.subject,
-      text: options.text,
-      html: options.html ?? options.text,
-      replyTo: options.replyTo,
     });
 
-    console.log("[leadNotifications] Email sent via SMTP:", {
-      messageId: info.messageId,
+    const info = await withTimeout(
+      "SMTP sendMail",
+      SMTP_SENDMAIL_HARD_TIMEOUT_MS,
+      transporter.sendMail({
+        from: fromAddress,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html ?? options.text,
+        replyTo: options.replyTo,
+      })
+    );
+
+    console.log(`${pfx} Email sent via SMTP:`, {
+      messageId: (info as any).messageId,
+      accepted: (info as any).accepted,
+      rejected: (info as any).rejected,
       to: options.to,
       subject: options.subject,
     });
   } catch (err) {
     console.error(
-      "[leadNotifications] Failed to send email via SMTP; logging fallback:",
+      `${pfx} Failed to send email via SMTP; logging fallback:`,
       err
     );
     console.log("From:", fromAddress);
     console.log("To:", options.to);
     console.log("Subject:", options.subject);
-    if (options.text) {
-      console.log("Text body:\n", options.text);
-    }
-    if (options.html) {
-      console.log("HTML body:\n", options.html);
-    }
+    if (options.text) console.log("Text body:\n", options.text);
+    if (options.html) console.log("HTML body:\n", options.html);
   }
 }
 
@@ -195,10 +257,16 @@ function buildPlainTextBody(lead: LeadRecord): string {
 // INTERNAL NOTIFICATION EMAIL (to you)
 // ---------------------------------------------------------------------------
 
-export async function sendLeadNotification(lead: LeadRecord): Promise<void> {
+export async function sendLeadNotification(
+  lead: LeadRecord,
+  opts?: { requestId?: string }
+): Promise<void> {
+  const reqId = opts?.requestId ?? "no-reqid";
+  const pfx = `[leadNotifications:${reqId}]`;
+
   if (EMAILS_DISABLED) {
     console.log(
-      "[leadNotifications] Emails disabled via DISABLE_LEAD_EMAILS; skipping internal notification.",
+      `${pfx} Emails disabled via DISABLE_LEAD_EMAILS; skipping internal notification.`,
       { leadId: lead.id, type: lead.type }
     );
     return;
@@ -215,7 +283,7 @@ export async function sendLeadNotification(lead: LeadRecord): Promise<void> {
       ? BILLING_NOTIFY_EMAIL
       : CONTACT_NOTIFY_EMAIL;
 
-  console.log("[leadNotifications] Preparing SMTP notification:", {
+  console.log(`${pfx} Preparing SMTP notification:`, {
     leadId: lead.id,
     type,
     to,
@@ -224,7 +292,7 @@ export async function sendLeadNotification(lead: LeadRecord): Promise<void> {
 
   if (!to) {
     console.warn(
-      "[leadNotifications] No destination email configured (CONTACT/QUOTE/SUPPORT/BILLING_NOTIFY_EMAIL); logging only."
+      `${pfx} No destination email configured (CONTACT/QUOTE/SUPPORT/BILLING_NOTIFY_EMAIL); logging only.`
     );
     console.log(buildPlainTextBody(lead));
     return;
@@ -233,7 +301,7 @@ export async function sendLeadNotification(lead: LeadRecord): Promise<void> {
   const subject = buildSubject(lead);
   const text = buildPlainTextBody(lead);
 
-  console.log("\n[leadNotifications] New lead notification (SMTP)");
+  console.log(`\n${pfx} New lead notification (SMTP)`);
   console.log("To:", to);
   console.log("Subject:", subject);
 
@@ -242,6 +310,7 @@ export async function sendLeadNotification(lead: LeadRecord): Promise<void> {
     subject,
     text,
     replyTo: lead.email || undefined,
+    requestId: reqId,
   });
 }
 
@@ -395,10 +464,16 @@ function buildReceiptHtml(lead: LeadRecord): string {
   `;
 }
 
-export async function sendLeadReceipt(lead: LeadRecord): Promise<void> {
+export async function sendLeadReceipt(
+  lead: LeadRecord,
+  opts?: { requestId?: string }
+): Promise<void> {
+  const reqId = opts?.requestId ?? "no-reqid";
+  const pfx = `[leadNotifications:${reqId}]`;
+
   if (EMAILS_DISABLED) {
     console.log(
-      "[leadNotifications] Emails disabled via DISABLE_LEAD_EMAILS; skipping customer receipt.",
+      `${pfx} Emails disabled via DISABLE_LEAD_EMAILS; skipping customer receipt.`,
       { leadId: lead.id, type: lead.type }
     );
     return;
@@ -406,7 +481,7 @@ export async function sendLeadReceipt(lead: LeadRecord): Promise<void> {
 
   if (RECEIPT_EMAILS_DISABLED) {
     console.log(
-      "[leadNotifications] Customer receipts disabled via DISABLE_LEAD_RECEIPT_EMAILS; skipping.",
+      `${pfx} Customer receipts disabled via DISABLE_LEAD_RECEIPT_EMAILS; skipping.`,
       { leadId: lead.id, type: lead.type }
     );
     return;
@@ -414,7 +489,7 @@ export async function sendLeadReceipt(lead: LeadRecord): Promise<void> {
 
   if (!lead.email) {
     console.warn(
-      "[leadNotifications] Lead has no email; cannot send customer receipt.",
+      `${pfx} Lead has no email; cannot send customer receipt.`,
       { leadId: lead.id, type: lead.type }
     );
     return;
@@ -423,7 +498,7 @@ export async function sendLeadReceipt(lead: LeadRecord): Promise<void> {
   const subject = buildReceiptSubject(lead);
   const html = buildReceiptHtml(lead);
 
-  console.log("\n[leadNotifications] Customer receipt (SMTP)");
+  console.log(`\n${pfx} Customer receipt (SMTP)`);
   console.log("To:", lead.email);
   console.log("Subject:", subject);
 
@@ -431,5 +506,6 @@ export async function sendLeadReceipt(lead: LeadRecord): Promise<void> {
     to: lead.email,
     subject,
     html,
+    requestId: reqId,
   });
 }

@@ -1,12 +1,8 @@
 // app/api/support/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import {
-  sendLeadNotification,
-  sendLeadReceipt,
-  LeadRecord,
-} from "@/lib/leadNotifications";
-import { sendLeadSmsReceipt } from "@/lib/telnyx";
+import { LeadRecord } from "@/lib/leadNotifications";
+import { notifyLead } from "@/lib/notifyLead";
 
 export const runtime = "nodejs";
 
@@ -25,7 +21,14 @@ function normalizeUsPhone(input?: string): string | null {
   return null;
 }
 
+function requestId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+}
+
 export async function POST(req: NextRequest) {
+  const reqId = requestId();
+  const pfx = `[/api/support:${reqId}]`;
+
   const supabase = getSupabaseAdmin();
 
   try {
@@ -73,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     if (insertError && phoneE164) {
       console.warn(
-        "[api/support] Insert with phone failed; retrying without phone:",
+        `${pfx} Insert with phone failed; retrying without phone:`,
         insertError
       );
       const attempt2 = await supabase
@@ -87,7 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (insertError || !data) {
-      console.error("[api/support] Supabase insert error:", insertError);
+      console.error(`${pfx} Supabase insert error:`, insertError);
       return NextResponse.json(
         { success: false, error: "Failed to submit support request" },
         { status: 500 }
@@ -108,35 +111,16 @@ export async function POST(req: NextRequest) {
       created_at: data.created_at ?? new Date().toISOString(),
     };
 
-    void (async () => {
-      try {
-        await sendLeadNotification(lead);
-      } catch (e) {
-        console.error("[api/support] sendLeadNotification error:", e);
-      }
-
-      try {
-        await sendLeadReceipt(lead);
-      } catch (e) {
-        console.error("[api/support] sendLeadReceipt error:", e);
-      }
-
-      if (phoneE164) {
-        try {
-          await sendLeadSmsReceipt({
-            to: phoneE164,
-            name: lead.name,
-            formType: "support",
-          });
-        } catch (e) {
-          console.error("[api/support] sendLeadSmsReceipt error:", e);
-        }
-      }
-    })();
+    void notifyLead({
+      lead,
+      phoneE164,
+      formType: "support",
+      requestId: reqId,
+    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("[api/support] Unexpected error:", err);
+    console.error(`${pfx} Unexpected error:`, err);
     return NextResponse.json(
       { success: false, error: "Unexpected error" },
       { status: 500 }
