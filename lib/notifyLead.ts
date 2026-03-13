@@ -1,69 +1,149 @@
 // lib/notifyLead.ts
 import "server-only";
 
-import { sendLeadNotification, sendLeadReceipt, type LeadRecord } from "@/lib/leadNotifications";
+import {
+  sendLeadNotification,
+  sendLeadReceipt,
+  type LeadRecord,
+} from "@/lib/leadNotifications";
 import { sendLeadSmsReceipt } from "@/lib/telnyx";
 
 function requestIdFallback() {
   return `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
 }
 
-// Extra safety: if something internally hangs anyway, cap each task.
-function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+function withTimeout<T>(
+  label: string,
+  ms: number,
+  promiseFactory: () => Promise<T>
+): Promise<T> {
   let timeout: NodeJS.Timeout | null = null;
 
   const timeoutPromise = new Promise<T>((_, reject) => {
-    timeout = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    timeout = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
   });
 
-  return Promise.race([promise, timeoutPromise]).finally(() => {
+  return Promise.race([promiseFactory(), timeoutPromise]).finally(() => {
     if (timeout) clearTimeout(timeout);
   });
 }
 
-export async function notifyLead(params: {
+type NotifyLeadParams = {
   lead: LeadRecord;
   phoneE164?: string | null;
   formType: "contact" | "quote" | "billing" | "support";
   requestId?: string;
-}) {
-  const reqId = params.requestId ?? requestIdFallback();
+};
+
+type NamedTaskResult =
+  | { task: string; ok: true }
+  | { task: string; ok: false; error: string };
+
+export async function notifyLead({
+  lead,
+  phoneE164,
+  formType,
+  requestId,
+}: NotifyLeadParams) {
+  const reqId = requestId ?? requestIdFallback();
   const pfx = `[notifyLead:${reqId}]`;
 
-  const tasks: Promise<unknown>[] = [];
+  console.log(`${pfx} START`, {
+    leadId: lead.id,
+    formType,
+    hasPhone: Boolean(phoneE164),
+    email: lead.email,
+  });
 
-  // Internal email + customer receipt in parallel
-  tasks.push(
-    withTimeout("sendLeadNotification", 25_000, sendLeadNotification(params.lead, { requestId: reqId }))
-  );
+  const taskEntries: Array<{
+    task: "internalEmail" | "customerReceipt" | "smsReceipt";
+    promise: Promise<void>;
+  }> = [
+    {
+      task: "internalEmail",
+      promise: withTimeout("sendLeadNotification", 25_000, async () => {
+        console.log(`${pfx} Internal email START`, {
+          leadId: lead.id,
+          type: lead.type,
+          email: lead.email,
+        });
 
-  tasks.push(
-    withTimeout("sendLeadReceipt", 25_000, sendLeadReceipt(params.lead, { requestId: reqId }))
-  );
+        await sendLeadNotification(lead, { requestId: reqId });
 
-  // SMS in parallel (if phone)
-  if (params.phoneE164) {
-    tasks.push(
-      withTimeout(
-        "sendLeadSmsReceipt",
-        20_000,
-        sendLeadSmsReceipt({
-          to: params.phoneE164,
-          name: params.lead.name,
-          formType: params.formType,
+        console.log(`${pfx} Internal email OK`, {
+          leadId: lead.id,
+          type: lead.type,
+        });
+      }),
+    },
+    {
+      task: "customerReceipt",
+      promise: withTimeout("sendLeadReceipt", 25_000, async () => {
+        console.log(`${pfx} Customer receipt START`, {
+          leadId: lead.id,
+          to: lead.email,
+        });
+
+        await sendLeadReceipt(lead, { requestId: reqId });
+
+        console.log(`${pfx} Customer receipt OK`, {
+          leadId: lead.id,
+          to: lead.email,
+        });
+      }),
+    },
+  ];
+
+  if (phoneE164) {
+    taskEntries.push({
+      task: "smsReceipt",
+      promise: withTimeout("sendLeadSmsReceipt", 20_000, async () => {
+        console.log(`${pfx} SMS send START`, {
+          to: phoneE164,
+          formType,
+        });
+
+        await sendLeadSmsReceipt({
+          to: phoneE164,
+          name: lead.name,
+          formType,
           requestId: reqId,
-        })
-      )
-    );
+        });
+
+        console.log(`${pfx} SMS send OK`, {
+          to: phoneE164,
+          formType,
+        });
+      }),
+    });
+  } else {
+    console.log(`${pfx} SMS skipped`, {
+      reason: "No phoneE164 provided",
+    });
   }
 
-  const results = await Promise.allSettled(tasks);
-
-  const summary = results.map((r) =>
-    r.status === "fulfilled"
-      ? { ok: true }
-      : { ok: false, error: r.reason?.message ?? String(r.reason) }
+  const results = await Promise.allSettled(
+    taskEntries.map(async ({ task, promise }) => {
+      await promise;
+      return task;
+    })
   );
+
+  const summary: NamedTaskResult[] = results.map((result, index) => {
+    const task = taskEntries[index]?.task ?? `task-${index}`;
+
+    if (result.status === "fulfilled") {
+      return { task, ok: true };
+    }
+
+    return {
+      task,
+      ok: false,
+      error: result.reason?.message ?? String(result.reason),
+    };
+  });
 
   console.log(`${pfx} allSettled summary:`, summary);
 
