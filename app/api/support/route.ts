@@ -121,12 +121,16 @@ export async function POST(req: NextRequest) {
     created_at: data.created_at ?? new Date().toISOString(),
   };
 
-  void notifyLead({
-    lead,
-    phoneE164,
-    formType: "support",
-    requestId: reqId,
-  }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
+  try {
+    await notifyLead({
+      lead,
+      phoneE164,
+      formType: "support",
+      requestId: reqId,
+    });
+  } catch (e) {
+    console.error(`${pfx} notifyLead error:`, e);
+  }
 
   return NextResponse.json({ success: true });
 }

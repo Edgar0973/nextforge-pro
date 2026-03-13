@@ -125,12 +125,16 @@ export async function POST(req: NextRequest) {
   if (data) {
     const lead = data as unknown as LeadRecord;
 
-    void notifyLead({
-      lead,
-      phoneE164,
-      formType: "quote",
-      requestId: reqId,
-    }).catch((e) => console.error(`${pfx} notifyLead error:`, e));
+    try {
+      await notifyLead({
+        lead,
+        phoneE164,
+        formType: "quote",
+        requestId: reqId,
+      });
+    } catch (e) {
+      console.error(`${pfx} notifyLead error:`, e);
+    }
   }
 
   return NextResponse.json({ success: true, lead: data ?? null }, { status: 200 });
