@@ -13,6 +13,9 @@ const smsDisabled = process.env.DISABLE_LEAD_SMS === "1";
 // Hard cap so SMS can't hang forever either
 const TELNYX_SEND_HARD_TIMEOUT_MS = 12_000;
 
+// Telnyx expects E.164 (+ followed by digits). E.164 max length is 15 digits (excluding '+').
+const E164_REGEX = /^\+\d{7,15}$/;
+
 function withTimeout<T>(
   label: string,
   ms: number,
@@ -29,6 +32,13 @@ function withTimeout<T>(
   });
 }
 
+/**
+ * Normalizes common US inputs to E.164.
+ * - If already starts with "+", returns as-is (after trim).
+ * - If 10 digits -> assumes US (+1)
+ * - If 11 digits starting with 1 -> +<digits>
+ * - Otherwise returns "+<digits>" (best-effort) and validation will decide if it's usable.
+ */
 function normalizePhone(input: string): string {
   const value = input.trim();
 
@@ -43,10 +53,18 @@ function normalizePhone(input: string): string {
   return `+${digits}`;
 }
 
+function isValidE164(value: string): boolean {
+  return E164_REGEX.test(value);
+}
+
 type SmsReceiptParams = {
   to: string;
   name: string | null;
   formType: "contact" | "quote" | "billing" | "support";
+  /**
+   * If provided, used as idempotency key + log correlation.
+   * If not provided, we generate a unique id for log correlation only.
+   */
   requestId?: string;
 };
 
@@ -57,6 +75,7 @@ type TelnyxSendMessageResponse = {
     direction?: string;
     type?: string;
   };
+  errors?: unknown;
 };
 
 export async function sendLeadSmsReceipt({
@@ -65,8 +84,10 @@ export async function sendLeadSmsReceipt({
   formType,
   requestId,
 }: SmsReceiptParams): Promise<void> {
-  const reqId = requestId ?? "no-reqid";
-  const pfx = `[telnyx:${reqId}]`;
+  // Always have a unique correlation id for logs (even if caller didn't provide one)
+  const correlationId =
+    requestId?.trim() || (globalThis.crypto?.randomUUID?.() ?? "no-reqid");
+  const pfx = `[telnyx:${correlationId}]`;
 
   if (smsDisabled) {
     console.log(`${pfx} SMS disabled via DISABLE_LEAD_SMS; skipping.`, {
@@ -95,6 +116,24 @@ export async function sendLeadSmsReceipt({
 
   const normalizedTo = normalizePhone(to);
   const normalizedFrom = normalizePhone(fromNumber);
+
+  // Fail fast on obviously bad numbers to avoid confusing "sent OK" handoff logs
+  if (!isValidE164(normalizedTo)) {
+    console.warn(`${pfx} Invalid destination phone after normalization; skipping SMS.`, {
+      inputTo: to,
+      normalizedTo,
+    });
+    return;
+  }
+
+  if (!isValidE164(normalizedFrom)) {
+    console.warn(`${pfx} Invalid sender phone after normalization; skipping SMS.`, {
+      inputFrom: fromNumber,
+      normalizedFrom,
+    });
+    return;
+  }
+
   const displayName = name?.trim() || "there";
 
   const text = (() => {
@@ -126,6 +165,8 @@ export async function sendLeadSmsReceipt({
     to: normalizedTo,
     formType,
     messagingProfileId: messagingProfileId ? "(set)" : "(missing)",
+    // Only set idempotency when caller supplied a real requestId
+    idempotencyKey: requestId?.trim() ? "(set)" : "(not set)",
   });
 
   try {
@@ -133,13 +174,20 @@ export async function sendLeadSmsReceipt({
       "Telnyx POST /v2/messages",
       TELNYX_SEND_HARD_TIMEOUT_MS,
       async (signal) => {
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        };
+
+        // IMPORTANT FIX:
+        // Do not send a constant default idempotency key (e.g. "no-reqid") or you'll dedupe unintentionally.
+        if (requestId?.trim()) {
+          headers["Idempotency-Key"] = requestId.trim();
+        }
+
         const response = await fetch("https://api.telnyx.com/v2/messages", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            ...(reqId ? { "Idempotency-Key": reqId } : {}),
-          },
+          headers,
           body: JSON.stringify(payload),
           cache: "no-store",
           signal,
@@ -166,14 +214,23 @@ export async function sendLeadSmsReceipt({
       }
     );
 
+    const messageId = res?.data?.id ?? "(missing)";
+
     console.log(`${pfx} SMS sent OK`, {
       to: normalizedTo,
       formType,
-      messageId: res?.data?.id ?? "(missing)",
+      messageId,
       recordType: res?.data?.record_type ?? "(missing)",
       direction: res?.data?.direction ?? "(missing)",
       type: res?.data?.type ?? "(missing)",
     });
+
+    // If Telnyx didn’t return an id, treat as suspicious (helps avoid “sent OK” confusion)
+    if (!res?.data?.id) {
+      console.warn(`${pfx} Telnyx response missing message id; investigate response.`, {
+        response: res,
+      });
+    }
   } catch (err) {
     console.error(`${pfx} Failed to send SMS:`, err);
     throw err;
