@@ -57,6 +57,13 @@ function isValidE164(value: string): boolean {
   return E164_REGEX.test(value);
 }
 
+function generateCorrelationId(): string {
+  // Always unique enough for logs, even if crypto.randomUUID isn't available
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 type SmsReceiptParams = {
   to: string;
   name: string | null;
@@ -85,8 +92,7 @@ export async function sendLeadSmsReceipt({
   requestId,
 }: SmsReceiptParams): Promise<void> {
   // Always have a unique correlation id for logs (even if caller didn't provide one)
-  const correlationId =
-    requestId?.trim() || (globalThis.crypto?.randomUUID?.() ?? "no-reqid");
+  const correlationId = requestId?.trim() || generateCorrelationId();
   const pfx = `[telnyx:${correlationId}]`;
 
   if (smsDisabled) {
@@ -119,10 +125,13 @@ export async function sendLeadSmsReceipt({
 
   // Fail fast on obviously bad numbers to avoid confusing "sent OK" handoff logs
   if (!isValidE164(normalizedTo)) {
-    console.warn(`${pfx} Invalid destination phone after normalization; skipping SMS.`, {
-      inputTo: to,
-      normalizedTo,
-    });
+    console.warn(
+      `${pfx} Invalid destination phone after normalization; skipping SMS.`,
+      {
+        inputTo: to,
+        normalizedTo,
+      }
+    );
     return;
   }
 
@@ -174,20 +183,21 @@ export async function sendLeadSmsReceipt({
       "Telnyx POST /v2/messages",
       TELNYX_SEND_HARD_TIMEOUT_MS,
       async (signal) => {
+        // IMPORTANT:
+        // Only set Idempotency-Key when caller supplied a real requestId.
+        // Never fall back to a constant default or you'll dedupe unintentionally.
         const headers: Record<string, string> = {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         };
 
-        // IMPORTANT FIX:
-        // Do not send a constant default idempotency key (e.g. "no-reqid") or you'll dedupe unintentionally.
         if (requestId?.trim()) {
           headers["Idempotency-Key"] = requestId.trim();
         }
 
         const response = await fetch("https://api.telnyx.com/v2/messages", {
           method: "POST",
-          headers,
+          headers, // <-- single headers object (no duplicate headers key)
           body: JSON.stringify(payload),
           cache: "no-store",
           signal,
