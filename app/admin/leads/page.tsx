@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { formatInNJ } from "@/lib/datetime";
 
 type Lead = {
   id: string;
@@ -70,8 +71,7 @@ export default async function AdminLeadsPage() {
       ) : (
         <>
           <p className="mb-3 text-sm text-gray-600">
-            Showing{" "}
-            <span className="font-medium">{leads.length}</span>{" "}
+            Showing <span className="font-medium">{leads.length}</span>{" "}
             {leads.length === 1 ? "lead" : "leads"}, newest first.
           </p>
 
@@ -93,12 +93,12 @@ export default async function AdminLeadsPage() {
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
                 {leads.map((lead) => {
-                  const created = new Date(lead.created_at);
+                  const createdDisplay = formatInNJ(lead.created_at);
 
                   return (
                     <tr key={lead.id} className="align-top">
                       <td className="whitespace-nowrap px-3 py-2 text-xs text-gray-500">
-                        {created.toLocaleString()}
+                        {createdDisplay}
                       </td>
                       <td className="px-3 py-2 text-xs font-semibold">
                         <span

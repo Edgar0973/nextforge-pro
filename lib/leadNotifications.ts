@@ -1,5 +1,6 @@
 import "server-only";
 import nodemailer from "nodemailer";
+import { formatInNJ } from "@/lib/datetime";
 
 export type LeadType = "contact" | "quote" | "support" | "billing";
 
@@ -121,7 +122,11 @@ function getSmtpTransporter(): nodemailer.Transporter | null {
   return smtpTransporter;
 }
 
-function withTimeout<T>(label: string, ms: number, promise: Promise<T>): Promise<T> {
+function withTimeout<T>(
+  label: string,
+  ms: number,
+  promise: Promise<T>
+): Promise<T> {
   let timeout: NodeJS.Timeout | null = null;
 
   const timeoutPromise = new Promise<T>((_, reject) => {
@@ -149,9 +154,7 @@ async function sendMail(options: {
   const pfx = `[leadNotifications:${reqId}]`;
 
   if (!transporter) {
-    console.log(
-      `${pfx} SMTP not configured; logging email instead of sending.`
-    );
+    console.log(`${pfx} SMTP not configured; logging email instead of sending.`);
     console.log("From:", fromAddress);
     console.log("To:", options.to);
     console.log("Subject:", options.subject);
@@ -187,10 +190,7 @@ async function sendMail(options: {
       subject: options.subject,
     });
   } catch (err) {
-    console.error(
-      `${pfx} Failed to send email via SMTP; logging fallback:`,
-      err
-    );
+    console.error(`${pfx} Failed to send email via SMTP; logging fallback:`, err);
     console.log("From:", fromAddress);
     console.log("To:", options.to);
     console.log("Subject:", options.subject);
@@ -225,6 +225,7 @@ function formatCreatedAt(lead: LeadRecord): string {
           ? new Date(lead.created_at)
           : lead.created_at;
       if (!Number.isNaN(date.getTime())) {
+        // Keep ISO for storage/correlation (UTC), but display separately when needed.
         created = date.toISOString();
       }
     }
@@ -235,11 +236,13 @@ function formatCreatedAt(lead: LeadRecord): string {
 }
 
 function buildPlainTextBody(lead: LeadRecord): string {
-  const created = formatCreatedAt(lead);
+  const createdIso = formatCreatedAt(lead);
+  const createdNj = createdIso !== "N/A" ? formatInNJ(createdIso) : "N/A";
 
   return [
     `Type:      ${lead.type}`,
-    `Created:   ${created}`,
+    `Created:   ${createdNj} (America/New_York)`,
+    `CreatedISO:${createdIso}`,
     `From:      ${lead.name || "N/A"} <${lead.email}>`,
     `Company:   ${lead.company || "N/A"}`,
     `Source:    ${lead.source_page || "N/A"}`,
@@ -339,13 +342,7 @@ function buildReceiptHtml(lead: LeadRecord): string {
   const name = lead.name || "there";
 
   const createdIso = formatCreatedAt(lead);
-  const createdDisplay =
-    createdIso !== "N/A"
-      ? new Date(createdIso).toLocaleString("en-US", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
-      : null;
+  const createdDisplay = createdIso !== "N/A" ? formatInNJ(createdIso) : null;
 
   const titleMap: Record<LeadType, string> = {
     contact: "We’ve received your message",
@@ -488,10 +485,10 @@ export async function sendLeadReceipt(
   }
 
   if (!lead.email) {
-    console.warn(
-      `${pfx} Lead has no email; cannot send customer receipt.`,
-      { leadId: lead.id, type: lead.type }
-    );
+    console.warn(`${pfx} Lead has no email; cannot send customer receipt.`, {
+      leadId: lead.id,
+      type: lead.type,
+    });
     return;
   }
 
