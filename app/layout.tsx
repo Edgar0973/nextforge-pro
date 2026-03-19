@@ -7,6 +7,11 @@ export const metadata: Metadata = {
   title: "Next Forge Pro – Freelance Web & App Designer",
   description:
     "Mobile-first app and responsive website design for startups and growing teams.",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({

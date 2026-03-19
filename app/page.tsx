@@ -50,17 +50,16 @@ const testimonials = [
 export default function HomePage() {
   return (
     <>
-      {/* HERO */}
       <Section
         id="hero"
         className="border-b border-slate-900/80 bg-gradient-to-b from-slate-950/80 via-slate-950/90 to-slate-950/95"
       >
         <div className="flex flex-col gap-10 md:flex-row md:items-center">
-          {/* Left: pitch */}
           <div className="flex-1">
             <p className="mb-3 inline-flex rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
               Mobile-first apps &amp; responsive websites for startups
             </p>
+
             <h1 className="text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl">
               I design{" "}
               <span className="bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
@@ -68,6 +67,7 @@ export default function HomePage() {
               </span>{" "}
               that turn complex ideas into usable products.
             </h1>
+
             <p className="mt-4 max-w-xl text-sm text-slate-300 md:text-base">
               From first prototype to production-ready UI, I help teams design,
               refine, and ship digital experiences that feel fast, intuitive,
@@ -91,11 +91,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Right: video + metrics card */}
           <div className="flex-1">
             <div className="relative mx-auto max-w-sm">
               <div className="relative overflow-hidden rounded-3xl border border-cyan-400/30 bg-slate-900/80 shadow-[0_0_60px_rgba(45,212,191,0.35)]">
-                {/* subtle gradient overlay */}
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-cyan-500/20 via-transparent to-fuchsia-500/20" />
 
                 <div className="relative z-10 p-4">
@@ -107,7 +105,6 @@ export default function HomePage() {
                     <span>Next Forge Pro</span>
                   </div>
 
-                  {/* Background video */}
                   <div className="relative mb-4 h-40 overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/80">
                     <video
                       src="/cascadingcodenorthtosouthneongreen.mp4"
@@ -158,14 +155,12 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Extra glow accent */}
               <div className="pointer-events-none absolute -left-10 -top-10 h-24 w-24 rounded-full bg-cyan-500/40 blur-3xl" />
             </div>
           </div>
         </div>
       </Section>
 
-      {/* Services */}
       <Section
         eyebrow="Services"
         title="Design support for product-focused teams"
@@ -186,7 +181,6 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Recent projects */}
       <Section
         eyebrow="Selected work"
         title="Recent projects"
@@ -208,7 +202,6 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Testimonials */}
       <Section
         eyebrow="Testimonials"
         title="Teams I’ve partnered with"
@@ -220,9 +213,7 @@ export default function HomePage() {
               key={t.name}
               className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-sm text-slate-200"
             >
-              <blockquote className="text-slate-300">
-                “{t.quote}”
-              </blockquote>
+              <blockquote className="text-slate-300">“{t.quote}”</blockquote>
               <figcaption className="mt-3 text-xs text-slate-400">
                 <span className="font-medium text-slate-200">{t.name}</span> ·{" "}
                 {t.role}

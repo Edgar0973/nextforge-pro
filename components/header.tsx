@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -8,8 +9,8 @@ const links = [
   { href: "/services", label: "Services" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/contact", label: "Contact" },
-  { href: "/support", label: "Support" }, // 👈 added
-  { href: "/billing", label: "Billing" }, // 👈 added
+  { href: "/support", label: "Support" },
+  { href: "/billing", label: "Billing" },
 ];
 
 export function Header() {
@@ -17,14 +18,18 @@ export function Header() {
 
   return (
     <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 md:px-6">
-        {/* Logo / name */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900/80 ring-1 ring-cyan-400/40">
-            <span className="absolute inset-0 rounded-xl bg-gradient-to-tr from-cyan-500/20 via-fuchsia-500/10 to-transparent" />
-            <span className="relative h-3 w-3 rounded-sm bg-gradient-to-tr from-cyan-400 to-fuchsia-400 shadow-[0_0_16px_rgba(45,212,191,0.9)]" />
-          </span>
-          <div className="leading-tight">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 md:px-6">
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/NFP_DRAMATIC.png"
+            alt="Next Forge Pro logo"
+            width={140}
+            height={56}
+            priority
+            className="h-auto w-[90px] md:w-[110px]"
+          />
+
+          <div className="hidden leading-tight sm:block">
             <p className="text-sm font-semibold tracking-wide text-slate-50">
               Next Forge Pro
             </p>
@@ -34,7 +39,6 @@ export function Header() {
           </div>
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden items-center gap-2 md:flex">
           {links.map((link) => (
             <Link
@@ -46,13 +50,11 @@ export function Header() {
             </Link>
           ))}
 
-          {/* Single CTA → /quote */}
           <Link href="/quote" className="btn-pill hover:text-slate-950">
             Get a quote
           </Link>
         </nav>
 
-        {/* Mobile menu button */}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -64,7 +66,6 @@ export function Header() {
         </button>
       </div>
 
-      {/* Mobile nav panel */}
       {open && (
         <nav className="border-t border-slate-800 bg-slate-950/95 md:hidden">
           <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3">
@@ -79,7 +80,6 @@ export function Header() {
               </Link>
             ))}
 
-            {/* Mobile CTA – full-width pill */}
             <Link
               href="/quote"
               onClick={() => setOpen(false)}

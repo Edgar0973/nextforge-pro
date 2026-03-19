@@ -1,4 +1,4 @@
-﻿// components/footer.tsx
+﻿import Image from "next/image";
 import Link from "next/link";
 
 export function Footer() {
@@ -7,15 +7,27 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 text-sm text-slate-400 md:px-6">
-        {/* Top: Contact + Social & platforms + Marketplaces */}
+        <div className="flex flex-col items-center gap-3 border-b border-slate-800 pb-6 text-center">
+          <Link href="/" className="flex flex-col items-center gap-3">
+            <Image
+              src="/NFP_DRAMATIC.png"
+              alt="Next Forge Pro logo"
+              width={150}
+              height={45}
+              className="h-auto w-[120px] md:w-[140px]"
+            />
+            <p className="text-sm text-slate-300">
+              Mobile-first websites and app design for startups and growing teams.
+            </p>
+          </Link>
+        </div>
+
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Contact / forms + phone + Terms/Policy */}
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Contact
             </p>
 
-            {/* Use forms instead of direct email addresses */}
             <div className="space-y-1 text-sm text-slate-300">
               <p>Use these forms to reach us:</p>
               <ul className="mt-1 space-y-1">
@@ -49,20 +61,17 @@ export function Footer() {
               </a>
             </p>
 
-            {/* Terms + Policy grouped with contact block */}
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <Link href="/terms" className="hover:text-sky-300">
                 Terms
               </Link>
               <span className="text-slate-600">•</span>
-              {/* Disable prefetch to avoid 404 prefetch noise until /policy exists */}
-              <Link href="/policy" prefetch={false} className="hover:text-sky-300">
-                Policy
+              <Link href="/privacy" className="hover:text-sky-300">
+                Privacy
               </Link>
             </div>
           </div>
 
-          {/* Social / platforms */}
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Social &amp; platforms
@@ -103,7 +112,6 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Marketplaces: Thumbtack, Instajob, Upwork */}
           <div className="space-y-3">
             <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
               Marketplaces
@@ -137,10 +145,8 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Divider */}
         <div className="h-px w-full bg-slate-800" />
 
-        {/* Centered payment methods */}
         <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-sky-400">
             Payment methods
@@ -167,11 +173,9 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Divider */}
         <div className="h-px w-full bg-slate-800" />
 
-        {/* Bottom: centered copyright */}
-        <p className="text-center text-xs md:text-sm text-slate-500">
+        <p className="text-center text-xs text-slate-500 md:text-sm">
           © {year} Next Forge Pro LLC. All rights reserved.
         </p>
       </div>
