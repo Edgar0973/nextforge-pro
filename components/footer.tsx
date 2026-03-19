@@ -176,7 +176,7 @@ export function Footer() {
         <div className="h-px w-full bg-slate-800" />
 
         <p className="text-center text-xs text-slate-500 md:text-sm">
-          © {year} Next Forge Pro LLC. All rights reserved.
+          © 2026 Next Forge Pro. All rights reserved.
         </p>
       </div>
     </footer>
