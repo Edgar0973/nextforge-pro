@@ -1,44 +1,20 @@
-import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/header";
-import { Footer } from "@/components/footer";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Next Forge Pro – Freelance Web & App Designer",
+  title: "NextForge Pro — Launching Soon",
   description:
-    "Mobile-first app and responsive website design for startups and growing teams.",
-  icons: {
-    icon: "/icon.png",
-    shortcut: "/icon.png",
-    apple: "/icon.png",
-  },
+    "NextForge Pro is currently upgrading its website and will deploy soon.",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body className="min-h-screen antialiased">
-        {/* Techy background glow */}
-        <div className="pointer-events-none fixed inset-0 -z-10">
-          <div className="absolute inset-x-0 -top-40 h-80 bg-gradient-to-b from-cyan-500/30 via-transparent to-transparent blur-3xl" />
-          <div className="absolute -left-40 top-1/3 h-80 w-80 rounded-full bg-gradient-to-tr from-fuchsia-500/30 to-cyan-500/20 blur-3xl" />
-          <div className="absolute -right-40 bottom-0 h-80 w-80 rounded-full bg-gradient-to-tr from-lime-400/20 to-cyan-400/20 blur-3xl" />
-          <div className="absolute inset-0 bg-slate-950/80" />
-        </div>
-
-        <div className="flex min-h-screen flex-col">
-          <Header />
-
-          {/* Each page renders inside here */}
-          <main className="flex-1">{children}</main>
-
-          <Footer />
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
