@@ -1,46 +1,34 @@
 @import "tailwindcss";
 
-/* Dark tech base palette */
 :root {
-  --background: #020617; /* slate-950 */
-  --foreground: #e5e7eb; /* slate-200/300 area */
+  color-scheme: dark;
+  --background: #020617;
+  --foreground: #e5e7eb;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    /* Keep it dark even in "light" mode for consistent brand */
-    --background: #020617;
-    --foreground: #e5e7eb;
-  }
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 body {
-  min-height: 100vh;
-  margin: 0;
-  background-color: var(--background);
-  color: var(--foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", sans-serif;
 }
 
-/* ============================= */
-/* Global pill button styles     */
-/* ============================= */
-
-/* Base pill – text-like at rest, pill appears on hover */
 .btn-pill {
   @apply inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium
-    border border-transparent bg-transparent
-    text-slate-200
-    transition;
+    border border-transparent bg-transparent text-slate-200 transition;
 }
 
-/* Smaller pill variant (for nav items) */
 .btn-pill-sm {
   @apply px-3 py-1.5 text-xs;
 }
 
-/* Hover “illuminate” effect */
 .btn-pill:hover {
   @apply border-sky-500 bg-sky-500 text-slate-950 shadow shadow-cyan-500/30;
 }
