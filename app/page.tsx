@@ -2,11 +2,11 @@ import Image from "next/image";
 
 export default function HomePage() {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+    <main className="relative min-h-[100svh] overflow-hidden bg-neutral-950 text-white sm:min-h-screen">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.16),transparent_34%),radial-gradient(circle_at_80%_30%,rgba(16,185,129,0.08),transparent_24%),radial-gradient(circle_at_20%_80%,rgba(59,130,246,0.06),transparent_24%)]" />
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:44px_44px] [mask-image:radial-gradient(circle_at_center,black,transparent_85%)]" />
 
-      <section className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <section className="mx-auto flex min-h-[100svh] w-full max-w-3xl box-border items-center justify-center px-4 py-4 sm:min-h-screen sm:px-6 sm:py-12 lg:px-8">
         <div className="w-full rounded-[22px] border border-white/10 bg-white/[0.035] p-5 text-center shadow-2xl backdrop-blur-xl sm:rounded-[26px] sm:p-8 lg:p-10">
           <div className="mb-5 flex justify-center sm:mb-6">
             <Image
